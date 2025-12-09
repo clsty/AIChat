@@ -12,7 +12,7 @@ using UnityEngine.UI;
 
 namespace ChillAIMod
 {
-    [BepInPlugin("com.username.chillaimod", "Chill AI Mod", "1.0.0")]
+    [BepInPlugin("com.username.chillaimod", "Chill AI Mod", "1.0.1")]
     public class AIMod : BaseUnityPlugin
     {
         // ================= 【配置项】 =================
@@ -98,7 +98,7 @@ namespace ChillAIMod
 
             _personaConfig = Config.Bind("3. Persona", "SystemPrompt", DefaultPersona, "System Prompt");
 
-            Logger.LogInfo(">>> AIMod V1.0.0  已加载 <<<");
+            Logger.LogInfo(">>> AIMod V1.0.1  已加载 <<<");
         }
 
         void Update()
@@ -152,19 +152,15 @@ namespace ChillAIMod
 
         void DrawWindowContent(int windowID)
         {
-            // 外层滚动条（负责整个窗口）
             _scrollPosition = GUILayout.BeginScrollView(_scrollPosition);
             GUILayout.BeginVertical();
 
-            // === 顶部状态 ===
             string status = _heroineService != null ? "🟢 核心已连接" : "🔴 正在寻找核心...";
             GUILayout.Label(status);
 
-            // === 设置折叠按钮 ===
             if (GUILayout.Button(_showSettings ? "🔽 收起设置" : "▶️ 展开设置 (API / 人设 / 路径)", GUILayout.Height(25)))
             {
                 _showSettings = !_showSettings;
-                // 展开时窗口变高，收起时变矮
                 _windowRect.height = _showSettings ? 650f : 250f;
             }
 
@@ -187,7 +183,6 @@ namespace ChillAIMod
                 GUILayout.Label("音频路径 (.wav):");
                 _refAudioPathConfig.Value = GUILayout.TextField(_refAudioPathConfig.Value);
                 GUILayout.Label("音频台词:");
-                // 台词框也给个最大高度，防止撑爆
                 _promptTextConfig.Value = GUILayout.TextArea(_promptTextConfig.Value, GUILayout.Height(50));
                 GUILayout.EndVertical();
 
@@ -195,15 +190,11 @@ namespace ChillAIMod
                 GUILayout.BeginVertical("box");
                 GUILayout.Label("<b>--- 人设 (System Prompt) ---</b>");
 
-                // 【核心修复】给长文本加一个独立的滚动区域
-                // GUILayout.Height(150) 限制这个区域只占 150 像素高
                 _personaScrollPosition = GUILayout.BeginScrollView(_personaScrollPosition, GUILayout.Height(150));
 
-                // 里面的 TextArea 设置为 ExpandHeight，让它根据文字内容撑开
-                // 这样外面的 ScrollView 就会出现滚动条了
                 _personaConfig.Value = GUILayout.TextArea(_personaConfig.Value, GUILayout.ExpandHeight(true));
 
-                GUILayout.EndScrollView(); // 结束内层滚动
+                GUILayout.EndScrollView();
 
                 GUILayout.EndVertical();
 
@@ -282,8 +273,22 @@ namespace ChillAIMod
                 }
                 else
                 {
-                    myText.text = "API Error: " + request.error;
+                    // 报错时的处理逻辑
+                    string errMsg = $"API Error: {request.error}\nCode: {request.responseCode}";
+                    if (request.responseCode == 401) errMsg += "\n(请检查 API Key 是否正确)";
+                    if (request.responseCode == 404) errMsg += "\n(模型名称或 URL 错误)";
+
+                    myText.text = errMsg;
+                    myText.color = Color.red;
+
+                    // 让错误信息在屏幕上停留 3 秒，让玩家看清楚
+                    yield return new WaitForSecondsRealtime(3.0f);
+
+                    // 手动执行清理工作，恢复游戏原本状态
+                    if (myTextObj != null) Destroy(myTextObj);
+                    if (originalTextObj != null) originalTextObj.SetActive(true);
                     _isProcessing = false;
+
                     yield break;
                 }
             }
