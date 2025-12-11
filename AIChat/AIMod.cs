@@ -12,7 +12,7 @@ using UnityEngine.UI;
 
 namespace ChillAIMod
 {
-    [BepInPlugin("com.username.chillaimod", "Chill AI Mod", "1.0.1")]
+    [BepInPlugin("com.username.chillaimod", "Chill AI Mod", "1.1.0")]
     public class AIMod : BaseUnityPlugin
     {
         // ================= 【配置项】 =================
@@ -24,17 +24,25 @@ namespace ChillAIMod
         private ConfigEntry<string> _promptLangConfig;
         private ConfigEntry<string> _targetLangConfig;
         private ConfigEntry<string> _personaConfig;
-
-        //private const string ChatApiUrl = "https://openrouter.ai/api/v1/chat/completions";
         private ConfigEntry<string> _chatApiUrlConfig;
+
+        // --- 新增窗口大小配置 ---
+        private ConfigEntry<float> _windowWidthConfig;
+        private ConfigEntry<float> _windowHeightConfig;
+
+        // --- 新增音量配置 ---
+        private ConfigEntry<float> _voiceVolumeConfig;
+
         // ================= 【UI 变量】 =================
         private bool _showInputWindow = false;
         private bool _showSettings = false;
-        private Rect _windowRect = new Rect(Screen.width / 2 - 225, Screen.height / 2 - 150, 500, 0);
+        // 初始值在 Awake 中根据配置更新
+        private Rect _windowRect = new Rect(0, 0, 500, 0);
         private Vector2 _scrollPosition = Vector2.zero;
 
         private string _playerInput = "";
         private bool _isProcessing = false;
+        private bool _isResizing = false; // 新增：拖拽调整大小状态
 
         private AudioSource _audioSource;
         private MonoBehaviour _heroineService;
@@ -46,9 +54,14 @@ namespace ChillAIMod
 
         private bool _isAISpeaking = false;
 
+        // 新增：用于 UI 输入的临时字符串，避免每次都转换
+        private string _tempWidthString;
+        private string _tempHeightString;
+        private string _tempVolumeString; // 新增：用于音量输入的临时字符串
+
         // 默认人设
         private const string DefaultPersona = @"
-            You are Satone (聪音), a girl who loves writing novels and is full of imagination.
+            You are Satone（さとね）, a girl who loves writing novels and is full of imagination.
             
             【Current Situation】
             We are currently in a **Video Call (视频通话)** session. 
@@ -73,7 +86,7 @@ namespace ChillAIMod
             
             Example 1: [Wave] ||| やあ、準備はいい？一緒に頑張りましょう。 ||| 嗨，准备好了吗？一起加油吧。
             Example 2: [Think] ||| うーん、ここの描写が難しいのよね… ||| 嗯……这里的描写好难写啊……
-            Example 3: [Drink] ||| ふぅ…ちょっと休憩しない？画面越しだけど、乾杯。 ||| 呼……要不休息一下？虽然隔着屏幕，干杯。
+            Example 3: [Drink] ||| ふぅ…ちょっと休憩しない？画面越しだけど、乾杯。 ||| 呼……要不休息一下？虽然隔着屏幕，乾杯。
         ";
         private Vector2 _personaScrollPosition = Vector2.zero;
         void Awake()
@@ -82,7 +95,7 @@ namespace ChillAIMod
             this.gameObject.hideFlags = HideFlags.HideAndDontSave;
             _audioSource = this.gameObject.AddComponent<AudioSource>();
             _audioSource.playOnAwake = false;
-            _audioSource.volume = 1.0f;
+
             // 绑定配置
             _chatApiUrlConfig = Config.Bind("1. General", "ApiUrl",
                 "https://openrouter.ai/api/v1/chat/completions",
@@ -96,9 +109,34 @@ namespace ChillAIMod
             _promptLangConfig = Config.Bind("2. Audio", "PromptLang", "ja", "Ref Lang");
             _targetLangConfig = Config.Bind("2. Audio", "TargetLang", "ja", "Target Lang");
 
+            // 【新增音量配置】
+            _voiceVolumeConfig = Config.Bind("2. Audio", "VoiceVolume", 1.0f, "语音播放音量 (0.0 - 1.0)");
+
+
             _personaConfig = Config.Bind("3. Persona", "SystemPrompt", DefaultPersona, "System Prompt");
 
-            Logger.LogInfo(">>> AIMod V1.0.1  已加载 <<<");
+            // 新增：窗口大小配置
+            _windowWidthConfig = Config.Bind("4. UI", "WindowWidth", 500f, "控制台窗口宽度");
+            _windowHeightConfig = Config.Bind("4. UI", "WindowHeightBase", 250f, "控制台窗口的基础高度 (展开设置前)");
+
+            // 初始化 _audioSource 音量
+            _audioSource.volume = _voiceVolumeConfig.Value;
+
+            // 初始化 _windowRect 的位置和大小
+            // 使用基础高度居中
+            _windowRect = new Rect(
+                Screen.width / 2 - _windowWidthConfig.Value / 2,
+                Screen.height / 2 - _windowHeightConfig.Value / 2,
+                _windowWidthConfig.Value,
+                _windowHeightConfig.Value
+            );
+
+            // 初始化临时字符串
+            _tempWidthString = _windowWidthConfig.Value.ToString("F0");
+            _tempHeightString = _windowHeightConfig.Value.ToString("F0");
+            _tempVolumeString = _voiceVolumeConfig.Value.ToString("F2");
+
+            Logger.LogInfo(">>> AIMod V1.1.0  已加载 <<<");
         }
 
         void Update()
@@ -134,15 +172,74 @@ namespace ChillAIMod
                 if (Time.unscaledTime - 0 > 0.2f) // 简单防抖
                 {
                     _showInputWindow = !_showInputWindow;
+                    // 每次打开时，重新计算 X 轴居中
+                    if (_showInputWindow)
+                    {
+                        _windowRect.x = Screen.width / 2 - _windowWidthConfig.Value / 2;
+                    }
                     e.Use();
                 }
             }
 
             if (_showInputWindow)
             {
-                // 动态调整窗口高度
-                float targetHeight = _showSettings ? 600f : 200f;
-                _windowRect.height = targetHeight;
+                // --- 1. 拖拽调整大小逻辑 ---
+                if (_isResizing)
+                {
+                    Event currentEvent = Event.current;
+
+                    if (currentEvent.type == EventType.MouseDrag)
+                    {
+                        // 鼠标位置 (currentEvent.mousePosition) 在 OnGUI 中是屏幕坐标
+                        float newWidth = currentEvent.mousePosition.x - _windowRect.x;
+                        float newHeight = currentEvent.mousePosition.y - _windowRect.y;
+
+                        // 最小宽度和高度限制
+                        _windowRect.width = Mathf.Max(300f, newWidth);
+                        _windowRect.height = Mathf.Max(200f, newHeight);
+
+                        currentEvent.Use();
+                    }
+                    else if (currentEvent.type == EventType.MouseUp)
+                    {
+                        _isResizing = false;
+
+                        // 鼠标松开时，将新尺寸保存到配置项
+                        _windowWidthConfig.Value = _windowRect.width;
+
+                        // 计算新的基础高度 (即设置面板收起时的预期高度)
+                        const float SettingsExtraHeight = 400f;
+                        float newBaseHeight = _windowRect.height;
+
+                        if (_showSettings)
+                        {
+                            newBaseHeight -= SettingsExtraHeight;
+                        }
+
+                        // 保存基础高度，并更新设置面板中的临时显示字符串
+                        _windowHeightConfig.Value = Mathf.Max(100f, newBaseHeight);
+                        _tempWidthString = _windowWidthConfig.Value.ToString("F0");
+                        _tempHeightString = _windowHeightConfig.Value.ToString("F0");
+
+                        currentEvent.Use();
+                    }
+                }
+                else
+                {
+                    // --- 2. 如果没有拖拽，根据配置和设置状态计算窗口大小 (保持原逻辑) ---
+                    _windowRect.width = _windowWidthConfig.Value;
+                    float targetHeight = _windowHeightConfig.Value;
+
+                    // 设置面板的额外高度
+                    const float SettingsExtraHeight = 400f;
+                    if (_showSettings)
+                    {
+                        targetHeight += SettingsExtraHeight;
+                    }
+
+                    _windowRect.height = Mathf.Max(targetHeight, 200f);
+                }
+                // --- 动态调整窗口高度和宽度结束 ---
 
                 GUI.backgroundColor = new Color(0.1f, 0.1f, 0.1f, 0.95f);
                 _windowRect = GUI.Window(12345, _windowRect, DrawWindowContent, "Chill AI 控制台");
@@ -161,7 +258,6 @@ namespace ChillAIMod
             if (GUILayout.Button(_showSettings ? "🔽 收起设置" : "▶️ 展开设置 (API / 人设 / 路径)", GUILayout.Height(25)))
             {
                 _showSettings = !_showSettings;
-                _windowRect.height = _showSettings ? 650f : 250f;
             }
 
             if (_showSettings)
@@ -184,7 +280,94 @@ namespace ChillAIMod
                 _refAudioPathConfig.Value = GUILayout.TextField(_refAudioPathConfig.Value);
                 GUILayout.Label("音频台词:");
                 _promptTextConfig.Value = GUILayout.TextArea(_promptTextConfig.Value, GUILayout.Height(50));
+
+                // 【新增音量控制 UI】
+                GUILayout.Space(5);
+                GUILayout.Label($"语音音量 (0.00 - 1.00): {_voiceVolumeConfig.Value:F2}");
+                GUILayout.BeginHorizontal();
+
+                // 滑动条控制音量
+                float newVolume = GUILayout.HorizontalSlider(_voiceVolumeConfig.Value, 0.0f, 1.0f);
+                if (newVolume != _voiceVolumeConfig.Value)
+                {
+                    _voiceVolumeConfig.Value = newVolume;
+                    _audioSource.volume = newVolume;
+                    _tempVolumeString = newVolume.ToString("F2");
+                }
+
+                // 文本输入和应用按钮
+                GUILayout.Space(5);
+                _tempVolumeString = GUILayout.TextField(_tempVolumeString, GUILayout.Width(50));
+                if (GUILayout.Button("应用", GUILayout.Width(40)))
+                {
+                    if (float.TryParse(_tempVolumeString, out float parsedVolume))
+                    {
+                        // 限制音量在 0.0 到 1.0 之间
+                        parsedVolume = Mathf.Clamp(parsedVolume, 0.0f, 1.0f);
+                        _voiceVolumeConfig.Value = parsedVolume;
+                        _audioSource.volume = parsedVolume;
+                        _tempVolumeString = parsedVolume.ToString("F2");
+                    }
+                    else
+                    {
+                        Logger.LogError("音量输入无效，请使用数字 (0.0 - 1.0)");
+                        _tempVolumeString = _voiceVolumeConfig.Value.ToString("F2"); // 恢复显示配置值
+                    }
+                }
+
+                GUILayout.EndHorizontal();
                 GUILayout.EndVertical();
+                // 【音量控制 UI 结束】
+
+                // 窗口大小调整配置 (依然保留精确输入)
+                GUILayout.Space(5);
+                GUILayout.BeginVertical("box");
+                GUILayout.Label("<b>--- 界面配置 (窗口大小) ---</b>");
+
+                // 窗口宽度
+                GUILayout.Label($"当前宽度: {_windowWidthConfig.Value:F0}px");
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("新宽度:", GUILayout.Width(60));
+                _tempWidthString = GUILayout.TextField(_tempWidthString);
+                if (GUILayout.Button("应用", GUILayout.Width(50)))
+                {
+                    if (float.TryParse(_tempWidthString, out float newWidth) && newWidth >= 300f)
+                    {
+                        _windowWidthConfig.Value = newWidth;
+                        // 重新居中
+                        _windowRect.x = Screen.width / 2 - newWidth / 2;
+                        _tempWidthString = newWidth.ToString("F0");
+                    }
+                    else
+                    {
+                        Logger.LogError("宽度输入无效，必须大于或等于 300px");
+                        _tempWidthString = _windowWidthConfig.Value.ToString("F0"); // 恢复显示配置值
+                    }
+                }
+                GUILayout.EndHorizontal();
+
+                // 窗口基础高度
+                GUILayout.Label($"当前基础高度: {_windowHeightConfig.Value:F0}px");
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("新高度:", GUILayout.Width(60));
+                _tempHeightString = GUILayout.TextField(_tempHeightString);
+                if (GUILayout.Button("应用", GUILayout.Width(50)))
+                {
+                    if (float.TryParse(_tempHeightString, out float newHeight) && newHeight >= 100f)
+                    {
+                        _windowHeightConfig.Value = newHeight;
+                        _tempHeightString = newHeight.ToString("F0");
+                    }
+                    else
+                    {
+                        Logger.LogError("基础高度输入无效，必须大于或等于 100px");
+                        _tempHeightString = _windowHeightConfig.Value.ToString("F0"); // 恢复显示配置值
+                    }
+                }
+                GUILayout.EndHorizontal();
+
+                GUILayout.EndVertical();
+                // --- 窗口大小调整配置结束 ---
 
                 GUILayout.Space(5);
                 GUILayout.BeginVertical("box");
@@ -212,7 +395,12 @@ namespace ChillAIMod
             GUILayout.Label("<b>与聪音对话:</b>");
 
             GUI.backgroundColor = Color.white;
-            _playerInput = GUILayout.TextField(_playerInput, GUILayout.Height(50));
+
+            // 【输入框高度动态调整】
+            // 计算动态高度：基于窗口总高度-100f
+            float dynamicInputHeight = _windowRect.height - 100f;
+            dynamicInputHeight = Mathf.Clamp(dynamicInputHeight, 50f, 500f);
+            _playerInput = GUILayout.TextArea(_playerInput, GUILayout.Height(dynamicInputHeight));
 
             GUILayout.Space(5);
             GUI.backgroundColor = _isProcessing ? Color.gray : Color.cyan;
@@ -229,9 +417,77 @@ namespace ChillAIMod
             GUILayout.EndVertical();
             GUILayout.EndScrollView(); // 结束外层滚动
 
-            // 允许拖拽窗口
-            GUI.DragWindow();
+            // --- Resizing Handle (Bottom Right Corner) ---
+            // 定义拖拽手柄区域
+            const float handleSize = 25f;
+            // 因为窗口大小是动态变化的，这里使用 _windowRect.width/height
+            Rect handleRect = new Rect(_windowRect.width - handleSize, _windowRect.height - handleSize, handleSize, handleSize);
+
+            // 绘制视觉提示
+            GUI.Box(handleRect, "⇲", GUI.skin.GetStyle("Button"));
+
+            // 检查鼠标是否在手柄区域按下
+            Event currentEvent = Event.current;
+            if (currentEvent.type == EventType.MouseDown && handleRect.Contains(currentEvent.mousePosition))
+            {
+                // 仅在主按钮 (左键) 按下时开始调整
+                if (currentEvent.button == 0)
+                {
+                    _isResizing = true;
+                    currentEvent.Use(); // 消耗事件，防止它被 DragWindow() 误判为移动
+                }
+            }
+
+            // 允许拖拽窗口 (DragWindow handles position dragging)
+            // 只有在没有进行大小调整时才允许位置拖拽，否则 Resize 逻辑会处理 MouseDrag 事件
+            if (!_isResizing)
+            {
+                GUI.DragWindow();
+            }
         }
+
+        // =========================================================================================
+        // 【新增辅助函数】确保对话文本（字幕）强制换行，以防过长溢出屏幕。
+        // =========================================================================================
+        /// <summary>
+        /// 在长文本中插入换行符，以确保文本在 UI 中可见。
+        /// </summary>
+        /// <param name="text">原始文本</param>
+        /// <param name="maxLineLength">每行最大字符数</param>
+        /// <returns>带有换行符的文本</returns>
+        private string InsertLineBreaks(string text, int maxLineLength = 25)
+        {
+            if (string.IsNullOrEmpty(text) || text.Length <= maxLineLength)
+            {
+                return text;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            int currentLength = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                sb.Append(c);
+                currentLength++;
+
+                if (currentLength >= maxLineLength && c != '\n')
+                {
+                    // 检查下一个字符是否已经是换行符，避免双重换行
+                    if (i + 1 < text.Length && text[i + 1] != '\n')
+                    {
+                        sb.Append('\n');
+                        currentLength = 0;
+                    }
+                }
+
+                if (c == '\n')
+                {
+                    currentLength = 0;
+                }
+            }
+            return sb.ToString();
+        }
+
 
         IEnumerator AIProcessRoutine(string prompt)
         {
@@ -324,6 +580,9 @@ namespace ChillAIMod
                     subtitleText = fullResponse; // 把整个回复当字幕
                 }
 
+                // 【应用换行】 在将字幕文本显示到 UI 之前，强制插入换行符
+                subtitleText = InsertLineBreaks(subtitleText, 25);
+
                 // 只有当 voiceText 不为空，且看起来像是日语时，才请求 TTS
                 // 简单的日语检测：看是否包含假名 (Hiragana/Katakana)
                 // 这是一个可选的保险措施
@@ -333,6 +592,7 @@ namespace ChillAIMod
                 {
                     myText.text = "Generating Voice...";
                     AudioClip downloadedClip = null;
+                    // 【修改点 1: 移除 apiKey 参数，因为 TTS 是本地部署】
                     yield return StartCoroutine(DownloadVoice(voiceText, (clip) => downloadedClip = clip));
 
                     if (downloadedClip != null)
@@ -375,6 +635,7 @@ namespace ChillAIMod
             _isProcessing = false;
         }
 
+        // 【修改点 2: DownloadVoice 协程函数移除 apiKey 参数，并修复 DownloadHandler】
         IEnumerator DownloadVoice(string textToSpeak, Action<AudioClip> onComplete)
         {
             string url = _sovitsUrlConfig.Value + "/tts";
@@ -403,10 +664,15 @@ namespace ChillAIMod
                 yield return request.SendWebRequest();
 
                 if (request.result == UnityWebRequest.Result.Success)
+                {
+                    // 只有在 DownloadHandlerAudioClip 成功设置后，这个调用才有效
                     onComplete?.Invoke(DownloadHandlerAudioClip.GetContent(request));
+                }
                 else
                 {
-                    Logger.LogError($"TTS Error: {request.error}");
+                    // 【改进：打印响应文本以辅助调试】
+                    string responseText = request.downloadHandler?.text ?? "N/A";
+                    Logger.LogError($"TTS Error: {request.error}. Response Text: {responseText}");
                     onComplete?.Invoke(null);
                 }
             }
@@ -545,7 +811,9 @@ namespace ChillAIMod
             RectTransform rt = go.AddComponent<RectTransform>();
             rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.sizeDelta = Vector2.zero;
             Text txt = go.AddComponent<Text>();
-            txt.fontSize = 26; txt.alignment = TextAnchor.UpperLeft; txt.horizontalOverflow = HorizontalWrapMode.Wrap;
+            txt.fontSize = 26;
+            txt.alignment = TextAnchor.UpperCenter;
+            txt.horizontalOverflow = HorizontalWrapMode.Wrap;
             Font f = Resources.GetBuiltinResource<Font>("Arial.ttf");
             if (f == null) f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             if (f != null) txt.font = f;
