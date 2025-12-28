@@ -29,7 +29,6 @@ namespace ChillAIMod
 
         private ConfigEntry<string> _TTSServicePathConfig;
         private ConfigEntry<bool> _LaunchTTSServiceConfig;
-        private ConfigEntry<bool> _invisibleTTSServiceConfig;
         private ConfigEntry<bool> _quitTTSServiceOnQuitConfig;
 
         // --- 新增窗口大小配置 ---
