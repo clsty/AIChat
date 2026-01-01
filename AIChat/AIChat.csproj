@@ -2,7 +2,7 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <GamePath>D:\steam\steamapps\common\Chill with You Lo-Fi Story</GamePath>
+    <GamePath>C:\Program Files (x86)\Steam\steamapps\common\Chill with You Lo-Fi Story\</GamePath>
     <UnityEditorPath>D:\UnityEditor\2022.3.62f1c1\Editor\Data\Managed</UnityEditorPath>
   </PropertyGroup>
   <PropertyGroup>
@@ -54,11 +54,11 @@
     </Reference>
     <Reference Include="UnityEngine.AnimationModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(UnityEditorPath)\UnityEngine\UnityEngine.AnimationModule.dll</HintPath>
+      <HintPath>$(GamePath)\Chill With You_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.AudioModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(UnityEditorPath)\UnityEngine\UnityEngine.AudioModule.dll</HintPath>
+      <HintPath>$(GamePath)\Chill With You_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>$(GamePath)\Chill With You_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
@@ -72,26 +72,27 @@
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(UnityEditorPath)\UnityEngine\UnityEngine.TextRenderingModule.dll</HintPath>
+      <HintPath>$(GamePath)\Chill With You_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>$(GamePath)\Chill With You_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(UnityEditorPath)\UnityEngine\UnityEngine.UIModule.dll</HintPath>
+      <HintPath>$(GamePath)\Chill With You_Data\Managed\UnityEngine.UIModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestAudioModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(UnityEditorPath)\UnityEngine\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+      <HintPath>$(GamePath)\Chill With You_Data\Managed\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(UnityEditorPath)\UnityEngine\UnityEngine.UnityWebRequestModule.dll</HintPath>
+      <HintPath>$(GamePath)\Chill With You_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AIMod.cs" />
+    <Compile Include="HierarchicalMemory.cs" />
     <Compile Include="Core\AudioUtils.cs" />
     <Compile Include="Core\ResponseParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

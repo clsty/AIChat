@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
 using System.IO;
+using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
@@ -41,6 +42,10 @@ namespace ChillAIMod
 
         // --- 新增音量配置 ---
         private ConfigEntry<float> _voiceVolumeConfig;
+
+        // --- 新增：实验性分层记忆系统 ---
+        private ConfigEntry<bool> _experimentalMemoryConfig;
+        private HierarchicalMemory _hierarchicalMemory;
 
         // --- 录音相关变量 ---
         private AudioClip _recordingClip;
@@ -133,6 +138,10 @@ namespace ChillAIMod
 
             _personaConfig = Config.Bind("3. Persona", "SystemPrompt", DefaultPersona, "System Prompt");
 
+            // 【新增：实验性分层记忆系统配置】
+            _experimentalMemoryConfig = Config.Bind("3. Persona", "ExperimentalMemory", false, 
+                "启用实验性分层记忆系统（递归摘要架构，自动压缩对话历史）");
+
             // 新增：窗口大小配置
             // 我们希望窗口宽度是屏幕的 1/3，高度是屏幕的 1/3 (或者你喜欢的比例)
             float responsiveWidth = Screen.width * 0.3f; // 30% 屏幕宽度
@@ -183,6 +192,13 @@ namespace ChillAIMod
             if (_ttsHealthCheckCoroutine == null)
             {
                 _ttsHealthCheckCoroutine = StartCoroutine(TTSHealthCheckLoop());
+            }
+
+            // 【初始化分层记忆系统】
+            if (_experimentalMemoryConfig.Value)
+            {
+                InitializeHierarchicalMemory();
+                Logger.LogInfo(">>> 实验性分层记忆系统已启用 <<<");
             }
 
             Logger.LogInfo(">>> AIMod V1.1.0  已加载 <<<");
@@ -466,6 +482,14 @@ namespace ChillAIMod
                 // --- 5. 人设配置 Box ---
                 GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
                 GUILayout.Label("<b>--- 人设 (System Prompt) ---</b>");
+                GUILayout.BeginHorizontal();
+                _experimentalMemoryConfig.Value = GUILayout.Toggle(_experimentalMemoryConfig.Value, "启用记忆", GUILayout.Height(elementHeight));
+                if (GUILayout.Button("🗑️ 清除所有记忆", GUILayout.Width(btnWidth*3)))
+                {
+                    _hierarchicalMemory?.ClearAllMemory();
+                    Logger.LogInfo("记忆已清空");
+                }
+                GUILayout.EndHorizontal();
                 _personaScrollPosition = GUILayout.BeginScrollView(_personaScrollPosition, GUILayout.Height(elementHeight * 5));
                 _personaConfig.Value = GUILayout.TextArea(_personaConfig.Value, GUILayout.ExpandHeight(true));
                 GUILayout.EndScrollView();
@@ -624,8 +648,25 @@ namespace ChillAIMod
             string apiKey = _apiKeyConfig.Value;
             string modelName = _modelConfig.Value;
             string persona = _personaConfig.Value;
+            
+            // 【集成分层记忆】获取带记忆上下文的提示词
+            string promptWithMemory = GetContextWithMemory(prompt);
+            
+            // 【调试日志】显示完整的请求内容
+            Logger.LogInfo($"[记忆系统] 启用状态: {_experimentalMemoryConfig.Value}");
+            Logger.LogInfo($"[发送给LLM的完整内容]\n========================================\n[System Prompt]\n{persona}\n\n[User Content + Memory]\n{promptWithMemory}\n========================================");
+            
+            string jsonBody = "";
             string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
-            string jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""system"", ""content"": ""{ResponseParser.EscapeJson(persona)}"" }}, {{ ""role"": ""user"", ""content"": ""{ResponseParser.EscapeJson(prompt)}"" }} ]{extraJson} }}";
+            if (modelName.Contains("gemma")) {
+                // 将 persona 作为背景信息放在 user 消息的最前面
+                string finalPrompt = $"[System Instruction]\n{persona}\n\n[User Message]\n{promptWithMemory}";
+                jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""user"", ""content"": ""{ResponseParser.EscapeJson(finalPrompt)}"" }} ]{extraJson} }}";
+            } else {
+                // Gemini 或 Local Ollama (如果是 Llama3 等) 通常支持 system role
+                jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""system"", ""content"": ""{ResponseParser.EscapeJson(persona)}"" }}, {{ ""role"": ""user"", ""content"": ""{ResponseParser.EscapeJson(promptWithMemory)}"" }} ]{extraJson} }}";
+            }
+            // string jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""system"", ""content"": ""{EscapeJson(persona)}"" }}, {{ ""role"": ""user"", ""content"": ""{EscapeJson(promptWithMemory)}"" }} ]{extraJson} }}";
             string fullResponse = "";
 
             // 3. 发送 Chat 请求
@@ -682,8 +723,14 @@ namespace ChillAIMod
                 string voiceText = "";     // 日语
                 string subtitleText = "";  // 中文
 
-                // 按 ||| 分割
+                // 按 ||| 分割（注意：有些模型可能会用单个 | ）
                 string[] parts = fullResponse.Split(new string[] { "|||" }, StringSplitOptions.None);
+
+                // 如果不是 |||，尝试单个 |
+                if (parts.Length < 3)
+                {
+                    parts = fullResponse.Split(new string[] { "|" }, StringSplitOptions.None);
+                }
 
                 // 【核心修改：严格的格式检查】
                 if (parts.Length >= 3)
@@ -694,6 +741,10 @@ namespace ChillAIMod
                     subtitleText = parts[2].Trim();
 
                     Logger.LogInfo($"Parse Response With\n\temotionTag: {emotionTag}\n\tvoiceText: {voiceText}\n\tsubtitleText: {subtitleText}");
+                    
+                    // 【集成分层记忆】存储日语原文（voiceText）而非中文翻译
+                    AddToMemorySystem("User", prompt);
+                    AddToMemorySystem("AI", $"[{emotionTag}] {voiceText}");
                 }
                 else
                 {
@@ -706,6 +757,10 @@ namespace ChillAIMod
                     emotionTag = "Think";
                     voiceText = ""; // 空字符串，不给 TTS
                     subtitleText = fullResponse; // 把整个回复当字幕
+                    
+                    // 【集成分层记忆】即使格式错误也要存储
+                    AddToMemorySystem("User", prompt);
+                    AddToMemorySystem("AI", $"[格式错误] {fullResponse}");
                 }
 
                 // 【应用换行】 在将字幕文本显示到 UI 之前，强制插入换行符
@@ -940,6 +995,14 @@ namespace ChillAIMod
         void OnApplicationQuit()
         {
             Logger.LogInfo("[Chill AI Mod] 退出中...");
+            
+            // 【保存记忆系统】
+            if (_hierarchicalMemory != null && _experimentalMemoryConfig.Value)
+            {
+                Logger.LogInfo("[HierarchicalMemory] 正在保存记忆...");
+                _hierarchicalMemory.SaveToFile();
+            }
+            
             Logger.LogInfo("[Chill AI Mod] 正在停止TTS轮询...");
             if (_ttsHealthCheckCoroutine != null)
             {
@@ -958,6 +1021,129 @@ namespace ChillAIMod
                     Logger.LogWarning($"关闭 TTS 服务时出错: {ex.Message}");
                 }
             }
-        } 
+        }
+        
+        // ================= 【分层记忆系统相关方法】 =================
+
+        /// <summary>
+        /// 初始化分层记忆系统
+        /// </summary>
+        private void InitializeHierarchicalMemory()
+        {
+            Func<string, Task<string>> llmSummarizer = async (prompt) => await CallLlmForSummaryAsync(prompt);
+            string memoryFilePath = Path.Combine(BepInEx.Paths.ConfigPath, "ChillAIMod", "memory.txt");
+
+            _hierarchicalMemory = new HierarchicalMemory(
+                llmSummarizer, 3, 10, 6, 5, memoryFilePath
+            );
+        }
+
+        /// <summary>
+        /// 调用 LLM 进行文本总结（将协程包装为 Task）
+        /// </summary>
+        private async Task<string> CallLlmForSummaryAsync(string prompt)
+        {
+            var tcs = new TaskCompletionSource<string>();
+
+            // 使用协程调用 LLM
+            StartCoroutine(CallLlmForSummaryCoroutine(prompt, (result) =>
+            {
+                tcs.SetResult(result);
+            }));
+
+            return await tcs.Task;
+        }
+
+        /// <summary>
+        /// 协程：调用 LLM 进行文本总结
+        /// </summary>
+        private IEnumerator CallLlmForSummaryCoroutine(string prompt, Action<string> onComplete)
+        {
+            Logger.LogInfo("[HierarchicalMemory] >>> 开始调用 LLM 进行总结...");
+            
+            string apiKey = _apiKeyConfig.Value;
+            string modelName = _modelConfig.Value;
+            string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
+
+            // 构建请求（gemma 风格：system instruction + user message 合并为一个 user 角色）
+            string finalPrompt = $"[System Instruction]\n你是一个专业的文本总结助手。\n\n[User Message]\n{prompt}";
+            string jsonBody = $@"{{ 
+                ""model"": ""{modelName}"", 
+                ""messages"": [ 
+                    {{ ""role"": ""user"", ""content"": ""{ResponseParser.EscapeJson(finalPrompt)}"" }} 
+                ]{extraJson} 
+            }}";
+
+            Logger.LogInfo($"[HierarchicalMemory] 发送总结请求到: {_chatApiUrlConfig.Value}");
+            Logger.LogInfo($"[HierarchicalMemory] Prompt 预览: {prompt.Substring(0, Math.Min(200, prompt.Length))}...");
+
+            using (UnityWebRequest request = new UnityWebRequest(_chatApiUrlConfig.Value, "POST"))
+            {
+                byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
+                request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+                request.downloadHandler = new DownloadHandlerBuffer();
+                request.SetRequestHeader("Content-Type", "application/json");
+                if (!_useLocalOllama.Value)
+                {
+                    request.SetRequestHeader("Authorization", "Bearer " + apiKey);
+                }
+
+                Logger.LogInfo("[HierarchicalMemory] 正在等待 API 响应...");
+                yield return request.SendWebRequest();
+
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    Logger.LogInfo($"[HierarchicalMemory] API 响应成功: {request.downloadHandler.text.Substring(0, Math.Min(200, request.downloadHandler.text.Length))}...");
+                    
+                    string response = _useLocalOllama.Value
+                        ? ResponseParser.ExtractContentFromOllama(request.downloadHandler.text , Logger)
+                        : ResponseParser.ExtractContentRegex(request.downloadHandler.text);
+
+                    Logger.LogInfo($"[HierarchicalMemory] 提取的总结结果: {response}");
+                    onComplete?.Invoke(response);
+                }
+                else
+                {
+                    Logger.LogError($"[HierarchicalMemory] 总结请求失败: {request.error}");
+                    Logger.LogError($"[HierarchicalMemory] 响应代码: {request.responseCode}");
+                    onComplete?.Invoke("[总结失败]");
+                }
+            }
+            
+            Logger.LogInfo("[HierarchicalMemory] <<< 总结调用完成");
+        }
+
+        /// <summary>
+        /// 将对话添加到记忆系统中（如果启用）
+        /// 注意：已改为后台异步处理，不阻塞主流程
+        /// </summary>
+        private void AddToMemorySystem(string role, string content)
+        {
+            if (_hierarchicalMemory != null && _experimentalMemoryConfig.Value)
+            {
+                _hierarchicalMemory.AddMessage($"{role}: {content}");
+            }
+        }
+
+        /// <summary>
+        /// 获取带记忆的完整上下文（用于发送给 LLM）
+        /// </summary>
+        private string GetContextWithMemory(string currentPrompt)
+        {
+            if (_hierarchicalMemory != null && _experimentalMemoryConfig.Value)
+            {
+                string memoryContext = _hierarchicalMemory.GetContext();
+                Logger.LogInfo($"[记忆系统] 当前记忆状态:\n{_hierarchicalMemory.GetMemoryStats()}");
+                
+                // 如果有记忆内容，则拼接；否则只返回当前提示
+                if (!string.IsNullOrWhiteSpace(memoryContext))
+                {
+                    return $"{memoryContext}\n\n【Current Input】\n{currentPrompt}";
+                }
+            }
+            
+            // 无记忆或未启用，直接返回原始 prompt
+            return currentPrompt;
+        }
     }
 }
