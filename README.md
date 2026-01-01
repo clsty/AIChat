@@ -32,7 +32,7 @@
 ## 配置（游戏内设置面板 / Config 文件键）
 插件通过 BepInEx 配置项保存，下列为重要项（在设置面板中可直接修改）
 - 1. General
-  - ApiUrl — 聊天 API 地址（例如 `https://openrouter.ai/api/v1/chat/completions`）
+  - ApiUrl — 聊天 API 地址（例如 `https://openrouter.ai/api/v1/chat/completions`, `http://127.0.0.1:11434/v1/chat/completions` for ollama, `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` for gemini）
   - APIKey — 聊天 API Key
   - ModelName — 聊天模型（例如 `openai/gpt-3.5-turbo`）
 - 2. Audio
