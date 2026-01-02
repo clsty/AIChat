@@ -4,7 +4,7 @@
 
 ## 特色
 - 使用任意兼容的聊天 API（如 OpenRouter/OpenAI）生成对话文本。
-- 使用本地部署的 SoVITS/TTS 服务（通过 /tts）生成语音（无需将 TTS Key 传到云端）。
+- 使用本地部署的 GPT-SoVITS/TTS 服务（通过 /tts）生成语音（无需将 TTS Key 传到云端）。
 - UI 内可调节音量、窗口尺寸、保存配置，支持拖拽调整大小与精确数值输入。
 - 要求 AI 输出严格格式：`[Emotion] ||| JAPANESE TEXT ||| CHINESE TRANSLATION`，插件根据情感切换动作并播放日语语音，显示中文字幕。
 - 若 AI 未按格式返回，只显示字幕并以思考动作代替语音（避免错误语言被 TTS 读出）。
@@ -37,12 +37,12 @@
      ```
      然后重命名文件，将 `.txt` 后缀去掉即可。
    - Linux 用户：Nvidia 显卡用户推荐使用 Docker，因为 Docker 具有稳定、易迁移、方便统一管理的特性。若不想使用 Docker 或显卡不是 Nvidia 的，则需要使用 conda 来运行，请自行参考 [GPT-SoVITS 的 README](https://github.com/RVC-Boss/GPT-SoVITS#linux)，**注意不是文档也不是 User guide**。以下是使用 Docker 的步骤：
-     - 安装 Docker、Docker Compose、Nvidia Container Toolkit 三件套，方法参见 [Debian | Docker Docs](https://docs.docker.com/engine/install/debian/#installation-methods)、[Plugin | Docker Docs](https://docs.docker.com/compose/install/linux/#install-using-the-repository) 和 [Installing the NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+     - 安装 Docker、Docker Compose、Nvidia Container Toolkit 三件套，方法分别参见 [Install | Docker Docs](https://docs.docker.com/engine/install/)、[Plugin | Docker Docs](https://docs.docker.com/compose/install/linux/#install-using-the-repository) 和 [Installing the NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)。
      - 克隆 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS)：
-     ```bash
-     git clone --depth=1 https://github.com/RVC-Boss/GPT-SoVITS
-     cd GPT-SoVITS
-     ```
+       ```bash
+       git clone --depth=1 https://github.com/RVC-Boss/GPT-SoVITS
+       cd GPT-SoVITS
+       ```
      - 运行 APIv2 服务：
        ```bash
        docker compose run --rm --service-ports GPT-SoVITS-CU126 python api_v2.py -a 0.0.0.0 -p 9880
@@ -131,7 +131,7 @@ UI 其他
 
 ## 安全与隐私
 - 聊天内容会发送到你配置的聊天 API（如 OpenRouter/OpenAI）；请注意 API Key 与隐私策略。
-- TTS 请求默认向本地 SoVITS 服务发起（不上传语音到第三方），更安全且延迟低。
+- TTS 请求默认向本地 GPT-SoVITS 服务发起（不上传语音到第三方），更安全且延迟低。
 
 ## 示例 Persona（默认已内置）
 插件内置了一个示例 SystemPrompt，示范如何强制 AI 始终以日语语音输出，并给出格式约束（请在设置中编辑以适配你的角色）。
