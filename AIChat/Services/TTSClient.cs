@@ -24,13 +24,10 @@ namespace AIChat.Services
             ManualLogSource logger,
             Action<AudioClip> onComplete, 
             int maxRetries = 3, 
-            float timeoutSeconds = 30f)
+            float timeoutSeconds = 30f,
+            bool skipAudioPathCheck = false)
         {
-            logger.LogInfo("[TTS] 开始生成语音...");
-
-
-
-            if (!File.Exists(refPath))
+            if (!skipAudioPathCheck && !File.Exists(refPath))
             {
                 string defaultPath = Path.Combine(BepInEx.Paths.PluginPath, "ChillAIMod", "Voice.wav");
                 if (File.Exists(defaultPath)) refPath = defaultPath;
@@ -49,6 +46,12 @@ namespace AIChat.Services
                 ""prompt_text"": ""{ResponseParser.EscapeJson(promptText)}"", 
                 ""prompt_lang"": ""{promptLang}"" 
             }}";
+
+            // Log the complete TTS API request before starting generation
+            logger.LogInfo($"[TTS] 完整请求信息:");
+            logger.LogInfo($"[TTS]   URL: {url}");
+            logger.LogInfo($"[TTS]   Request Body: {jsonBody}");
+            logger.LogInfo("[TTS] 开始生成语音...");
 
             for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
