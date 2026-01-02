@@ -9,7 +9,7 @@
 - 要求 AI 输出严格格式：`[Emotion] ||| JAPANESE TEXT ||| CHINESE TRANSLATION`，插件根据情感切换动作并播放日语语音，显示中文字幕。
 - 若 AI 未按格式返回，只显示字幕并以思考动作代替语音（避免错误语言被 TTS 读出）。
 
-## 快速开始（最短路径）
+## 安装 Mod 本体
 1. 下载 Mod
    - 从 [Releases](https://github.com/qzrs777/AIChat/releases) 下载本项目发布的压缩包，并解压。
      - 注：其核心部分 `AIChat.dll` 也可从本仓库源码构建得到。
@@ -23,49 +23,57 @@
 
 3. 配置 Mod
    - 打开游戏，按 F9 键调出 Mod 的界面。
-   - 配置好 API URL 与 API Key 以及 Model Name 并保存，此时就可以在“与聪音对话”的文本框里进行对话了（仅文字；稍后将配置语音）。
+   - 配置好 API URL 与 API Key 以及 Model Name 并保存，此时就可以在“与聪音对话”的文本框里进行对话了（仅文字；下一节将配置语音）。
 
-4. 语音配置（可选）
-   - 本项目依赖 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) 生成语音，而它的文档略显混乱，所以这里提供较为详细的说明。
-   - 安装（Windows 用户）：根据 GPT-SoVITS 的[文档](https://www.yuque.com/baicaigongchang1145haoyuangong/ib3g1e/dkxgpiy9zb96hob4)，直接下载整合包，解压后运行 `run_api.bat` 即可。如果没有 `run_api.bat`，可以自己建立一个 `run_api.bat.txt` 文件，编辑内容如下：
+## 语音配置（可选）
+本项目依赖 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) 生成语音，而它的文档略显混乱，所以这里提供较为详细的说明。
+
+1. 安装 GPT-SoVITS：
+   - Windows 用户：根据 GPT-SoVITS 的[文档](https://www.yuque.com/baicaigongchang1145haoyuangong/ib3g1e/dkxgpiy9zb96hob4)，直接下载整合包，解压后运行 `run_api.bat` 即可。如果没有 `run_api.bat`，可以自己建立一个 `run_api.bat.txt` 文件，编辑内容如下：
    ```bat
    @echo off
    .\runtime\python.exe api_v2.py -a 127.0.0.1 -p 9880
    pause
    ```
    然后重命名文件，将 `.txt` 后缀去掉即可。
-   - 安装（Linux 用户）：Nvidia 显卡用户推荐使用 Docker，因为 Docker 具有稳定、易迁移、方便统一管理的特性。若不想使用 Docker 或显卡不是 Nvidia 的，则需要使用 conda 来运行，请自行参考 [GPT-SoVITS 的 README](https://github.com/RVC-Boss/GPT-SoVITS#linux)，**注意不是文档也不是 User guide**。以下是使用 Docker 的步骤：
-     - 安装 Docker、Docker Compose、Nvidia Container Toolkit 三件套，方法参见 [Debian | Docker Docs](https://docs.docker.com/engine/install/debian/#installation-methods)、[Plugin | Docker Docs](https://docs.docker.com/compose/install/linux/#install-using-the-repository) 和 [Installing the NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
-     - 克隆 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS)：
-       ```bash
-       git clone --depth=1 https://github.com/RVC-Boss/GPT-SoVITS
-       cd GPT-SoVITS
-       ```
-     - 运行 APIv2 服务：
-       - Nvidia 50 系之前的显卡：
-       ```bash
-       docker compose run --rm --service-ports GPT-SoVITS-CU126 python api_v2.py -a 0.0.0.0 -p 9880
-       ```
-       - Nvidia 50 系显卡：
-       ```bash
-       docker compose run --rm --service-ports GPT-SoVITS-CU128 python api_v2.py -a 0.0.0.0 -p 9880
-       ```
-   - 准备音频文件：将前面下载过的 Mod 压缩包中的 `Voice_MainScenario_27_016.wav` 放到 `GPT-SoVITS` 的根目录下（对于 Windows 用户是整合包解压后的根目录，对于 Linux 用户是 Git 仓库的根目录）。
+   - Linux 用户：Nvidia 显卡用户推荐使用 Docker，因为 Docker 具有稳定、易迁移、方便统一管理的特性。若不想使用 Docker 或显卡不是 Nvidia 的，则需要使用 conda 来运行，请自行参考 [GPT-SoVITS 的 README](https://github.com/RVC-Boss/GPT-SoVITS#linux)，**注意不是文档也不是 User guide**。以下是使用 Docker 的步骤：
+   - 安装 Docker、Docker Compose、Nvidia Container Toolkit 三件套，方法参见 [Debian | Docker Docs](https://docs.docker.com/engine/install/debian/#installation-methods)、[Plugin | Docker Docs](https://docs.docker.com/compose/install/linux/#install-using-the-repository) 和 [Installing the NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+   - 克隆 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS)：
+   ```bash
+   git clone --depth=1 https://github.com/RVC-Boss/GPT-SoVITS
+   cd GPT-SoVITS
+   ```
+   - 运行 APIv2 服务：
+     - Nvidia 50 系之前的显卡：
+     ```bash
+     docker compose run --rm --service-ports GPT-SoVITS-CU126 python api_v2.py -a 0.0.0.0 -p 9880
+     ```
+     - Nvidia 50 系显卡：
+     ```bash
+     docker compose run --rm --service-ports GPT-SoVITS-CU128 python api_v2.py -a 0.0.0.0 -p 9880
+     ```
+
+2. 准备音频文件
+   - 将前面下载过的 Mod 压缩包中的 `Voice_MainScenario_27_016.wav` 放到 `GPT-SoVITS` 的根目录下（对于 Windows 用户是整合包解压后的根目录，对于 Linux 用户是 Git 仓库的根目录）。
    - 测试：在浏览器打开[测试链接](http://127.0.0.1:9880/tts?text=%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF%E3%80%81%E3%81%8A%E5%85%83%E6%B0%97%E3%81%A7%E3%81%99%E3%81%8B%EF%BC%9F%E4%BB%8A%E6%97%A5%E3%82%82%E4%B8%80%E7%B7%92%E3%81%AB%E9%A0%91%E5%BC%B5%E3%82%8A%E3%81%BE%E3%81%97%E3%82%87%E3%81%86%EF%BC%81&text_lang=ja&ref_audio_path=Voice_MainScenario_27_016.wav&prompt_text=%E5%90%9B%E3%81%8C%E9%9B%86%E4%B8%AD%E3%81%97%E3%81%9F%E6%99%82%E3%81%AE%E3%82%B7%E3%83%BC%E3%82%BF%E6%B3%A2%E3%82%92%E6%A4%9C%E5%87%BA%E3%81%97%E3%81%A6%E3%80%81%E3%83%AA%E3%83%B3%E3%82%AF%E3%82%92%E3%81%A4%E3%81%AA%E3%81%8E%E7%9B%B4%E3%81%9B%E3%81%B0%E5%85%83%E9%80%9A%E3%82%8A%E3%81%AB%E3%81%AA%E3%82%8B%E3%81%AF%E3%81%9A%E3%80%82&prompt_lang=ja&speed_factor=1.0)
-   （附：前面是经过转义的链接，下面是测试链接的实际内容）
-   ```url
-   http://127.0.0.1:9880/tts?text=こんにちは、お元気ですか？今日も一緒に頑張りましょう！&text_lang=ja&ref_audio_path=Voice_MainScenario_27_016.wav&prompt_text=君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。&prompt_lang=ja&speed_factor=1.0
-   ```
+   > 附：前面是经过转义的链接，下面是测试链接的实际内容：
+   > ```url
+   > http://127.0.0.1:9880/tts?text=こんにちは、お元気ですか？今日も一緒に頑張りましょう！&text_lang=ja&ref_audio_path=Voice_MainScenario_27_016.wav&prompt_text=君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。&prompt_lang=ja&speed_factor=1.0
+   > ```
+
    稍等片刻，将会下载一个大约 300 KiB 大小的 `tts.wav` 文件，播放它应当能听到三句与游戏角色相似的日语语音。
-   或者，直接在命令行用 `ffplay`（由 FFmpeg 提供）：
-   ```
-   ffplay -nodisp -autoexit 'http://127.0.0.1:9880/tts?text=こんにちは、お元気ですか？今日も一緒に頑張りましょう！&text_lang=ja&ref_audio_path=Voice_MainScenario_27_016.wav&prompt_text=君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。&prompt_lang=ja&speed_factor=1.0&streaming_mode=True'
-   ```
-   （注：这里测试使用的是 GTP-SoVITS 的 WebAPI 的 GET 用法，详见 [`api_v2.py`](https://github.com/RVC-Boss/GPT-SoVITS/blob/main/api_v2.py) 的注释）
-   - 测试成功后，在游戏按 F9 键调出 Mod 的界面中，将 `音频路径(.wav)` 的值改为 `Voice_MainScenario_27_016.wav`，并且勾选 `不检测音频文件路径` 即可。
-     下面两个参数默认都已填好，**一般不要改动**，如下：
-     - 音频台词（即 wav 音频文件的原文）：`君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。`
-     - TTS Service Url：`http://127.0.0.1:9880`
+   > 或者，直接在命令行用 `ffplay`（由 FFmpeg 提供）：
+   > ```
+   > ffplay -nodisp -autoexit 'http://127.0.0.1:9880/tts?text=こんにちは、お元気ですか？今日も一緒に頑張りましょう！&text_lang=ja&ref_audio_path=Voice_MainScenario_27_016.wav&prompt_text=君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。&prompt_lang=ja&speed_factor=1.0&streaming_mode=True'
+   > ```
+
+   注：这里测试使用的是 GTP-SoVITS 的 WebAPI 的 GET 用法，详见 [`api_v2.py`](https://github.com/RVC-Boss/GPT-SoVITS/blob/main/api_v2.py) 的注释。
+
+3. 在 Mod 中配置
+- 测试成功后，在游戏按 F9 键调出 Mod 的界面中，将 `音频路径(.wav)` 的值改为 `Voice_MainScenario_27_016.wav`，并且勾选 `不检测音频文件路径` 即可。
+- 下面两个参数默认都已填好，**一般不要改动**，如下：
+  - 音频台词（即 wav 音频文件的原文）：`君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。`
+  - TTS Service Url：`http://127.0.0.1:9880`
 
 ## 配置（游戏内设置面板 / Config 文件键）
 插件通过 BepInEx 配置项保存，下列为重要项（在设置面板中可直接修改）
