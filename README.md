@@ -11,15 +11,15 @@
 
 ## 快速开始（最短路径）
 1. 下载 Mod
-   - 从仓库下载本项目发布的压缩包，并解压。
+   - 从 [Releases](https://github.com/qzrs777/AIChat/releases) 下载本项目发布的压缩包，并解压。
      - 注：其核心部分 `AIChat.dll` 也可从本仓库源码构建得到。
 
 2. 安装 Mod
-   - 右键游戏 -> 管理 -> 浏览本地文件（或直接定位游戏根目录）。
+   - 在 Steam 右键游戏 -> 管理 -> 浏览本地文件（或直接定位游戏根目录）。
    - 将压缩包内的 `BepInEx_*` 下的内容复制到游戏根目录。
-     - 对于 Linux 用户：Mod 能被加载的原理是，当游戏程序运行时，它会加载根目录下的 `winhttp.dll`；但是在 Linux 下，本游戏经由 Proton 运行，而 Proton 默认会采用其自己的 DLL 文件，无视你所复制的 `winhttp.dll`。为此，你需要在 Steam 的此游戏的设置里，将启动选项填写为 `WINEDLLOVERRIDES="winhttp=n,b" %command%` （其中 `winhttp` 就是 `winhttp.dll` 的文件名）。
+     - Linux 用户请注意：Mod 能被加载的原理是，Windows 中的一些程序在启动时，同目录下的 DLL 文件（这里的是 `winhttp.dll`）比原本的 DLL 文件具有更高的优先级，从而被加载；但是在 Linux 下，Proton 自己的 DLL 文件具有更高的优先级，会无视同目录下的 `winhttp.dll`。所以，你需要在 Steam 的此游戏的设置里，将启动选项填写为 `WINEDLLOVERRIDES="winhttp=n,b" %command%` （其中 `winhttp` 就是 `winhttp.dll` 的文件名）。
    - 运行一次游戏（用于生成插件目录结构，这包括 `BepInEx` 目录下的 `config`、`core`、`patchers`、`plugins` 等目录）。
-   - 将 `AIChat.dll` 放入 `BepInEx` 目录的 `plugins` 目录。
+   - 将 `AIChat.dll` 放入 `BepInEx` 下的 `plugins` 目录中。
 
 3. 配置 Mod
    - 打开游戏，按 F9 键调出 Mod 的界面。
