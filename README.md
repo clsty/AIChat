@@ -25,7 +25,7 @@
 3. 安装 Mod
    - 请务必确保上一步已生成目录结构。否则，说明 BepInEx 前置未正确加载（在解决此问题之前，继续下一步是无意义的）。
    - 将 `AIChat.dll` 放入 `BepInEx` 下的 `plugins` 目录中。
-   - 打开游戏，按 F9 键调出 Mod 的界面。
+   - 打开游戏，按 F9 键或 F10 键调出 Mod 的界面。
    - 配置好 API URL 与 API Key 以及 Model Name 并保存，此时就可以在“与聪音对话”的文本框里进行对话了（仅文字；下一节将配置语音）。
      - API URL 示例：
        - OpenRouter：`https://openrouter.ai/api/v1/chat/completions`
@@ -59,7 +59,7 @@
        ```bash
        docker compose run --rm --service-ports GPT-SoVITS-CU126 python api_v2.py -a 0.0.0.0 -p 9880
        ```
-       （注：Nvidia 50 系显卡请将上面的 `126` 改为 `128`）
+       （注：对于 Nvidia 50 系显卡，请将上面的 `126` 改为 `128`）
 
 2. 放置必要文件
    - 将前面下载过的 Mod 压缩包中的 `api_v2_ex.py` 和 `Voice_MainScenario_27_016.wav` 放到 `GPT-SoVITS` 的根目录下（对于 Windows 用户是整合包解压后的根目录，对于 Linux 用户是 Git 仓库的根目录）。
@@ -107,20 +107,20 @@
 
 以下是部分配置项的说明。
 
-- 1. General
+1. General
   - ApiUrl — 聊天 API 地址（例如 `https://openrouter.ai/api/v1/chat/completions`, `http://127.0.0.1:11434/v1/chat/completions` for ollama, `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` for gemini）
   - APIKey — 聊天 API Key
   - ModelName — 聊天模型（例如 `openai/gpt-3.5-turbo`）
-- 2. Audio
+2. Audio
   - SoVITS_URL — 本地 TTS 服务地址（如 `http://127.0.0.1:9880`）
   - RefAudioPath — 参考音频路径（.wav）
   - TTS_Service_Path — 本地 TTS 服务路径。在游戏开启时自动启动。
   - PromptText — 参考音频对应的文本（用于声线迁移）
   - PromptLang / TargetLang — 参考文本与目标语言标识
   - VoiceVolume — 语音播放音量（0.0 - 1.0）
-- 3. Persona
+3. Persona
   - SystemPrompt — 给 LLM 的系统人设（默认内置一段示例人设）
-- 4. UI
+4. UI
   - WindowWidth / WindowHeightBase — 控制台窗口宽度与基础高度
 
 ### 设置面板功能
@@ -212,7 +212,7 @@
 - 在线构建：本项目由 GitHub Action 每日自动构建（也可由维护者手动触发），见 [Release Preview Build](https://github.com/qzrs777/AIChat/releases/tag/preview)。[![Build Status](https://github.com/qzrs777/AIChat/actions/workflows/build.yml/badge.svg)](https://github.com/qzrs777/AIChat/actions/workflows/build.yml)
 
 ## 调试与常见问题
-Mod 日志为游戏目录下的 `BepInEx` 中的 `LogOutput.log`。
+**Mod 日志**为游戏目录下的 `BepInEx` 中的 `LogOutput.log`。
 其中有 TTS 错误和响应文本，尤其注意请求发送的 JSON 数据（插件在请求体中会传入 `text`、`text_lang`、`ref_audio_path`、`prompt_text`、`prompt_lang`）。
 
 - TTS 报错 / TTS 返回空音频 / 没有声音
@@ -220,10 +220,10 @@ Mod 日志为游戏目录下的 `BepInEx` 中的 `LogOutput.log`。
     - 若不能，说明 TTS 服务未正确配置（与本 Mod 无关），可进一步确认是否已下载并正确配置本地 VITS 模型（EPIT、model 名称等）。
     - 若能，可能是 Mod 中的配置出错。请检查 BepInEx 配置项中 `SoVITS_URL` 是否正确（默认值 `http://127.0.0.1:9880`，测试方法请参考`测试 TTS 服务`的说明）。
   - 检查 GPT-SoVITS 日志（控制台界面）。
-  - 检查 Mod 日志
-- 插件没有生效 / 找不到 plugins 文件夹
+  - 检查 Mod 日志。
+- Mod 没有生效 / 找不到 plugins 文件夹
   - 运行一次游戏，以生成必要的目录结构；之后再将 `AIChat.dll` 放入 `BepInEx/plugins` 下。
 - AI 返回中文，但被 TTS 读出发音异常
-  - 检查 Mod 日志
+  - 检查 Mod 日志。
   - 若 AI 返回的内容不符合格式要求，请确保使用合适的 Persona，或尝试更换 AI 模型。
   - 注：插件默认会检测语音文本是否含日文假名，若无假名则不会调用 TTS，而仅显示字幕文本。
