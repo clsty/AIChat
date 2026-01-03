@@ -36,6 +36,7 @@ namespace ChillAIMod
         private ConfigEntry<bool> _LaunchTTSServiceConfig;
         private ConfigEntry<bool> _quitTTSServiceOnQuitConfig;
         private ConfigEntry<bool> _skipAudioPathCheckConfig;
+        private ConfigEntry<bool> _skipJapaneseCheckConfig;
 
         // --- 新增窗口大小配置 ---
         private ConfigEntry<float> _windowWidthConfig;
@@ -134,6 +135,7 @@ namespace ChillAIMod
             _LaunchTTSServiceConfig = Config.Bind("2. Audio", "LaunchTTSService", true, "是否在游戏启动时自动启动 TTS 服务");
             _quitTTSServiceOnQuitConfig = Config.Bind("2. Audio", "QuitTTSServiceOnQuit", true, "是否在游戏退出时自动关闭 TTS 服务");
             _skipAudioPathCheckConfig = Config.Bind("2. Audio", "SkipAudioPathCheck", false, "不检测音频文件路径（用 docker 部署 TTS 时请勾选）");
+            _skipJapaneseCheckConfig = Config.Bind("2. Audio", "SkipJapaneseCheck", false, "跳过日语检测（强制调用 TTS，即使文本不是日语）");
             _promptTextConfig = Config.Bind("2. Audio", "PromptText", "君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。", "Ref Audio Text");
             _promptLangConfig = Config.Bind("2. Audio", "PromptLang", "ja", "Ref Lang");
             _targetLangConfig = Config.Bind("2. Audio", "TargetLang", "ja", "Target Lang");
@@ -419,6 +421,9 @@ namespace ChillAIMod
                     
                     GUILayout.Label("输出语言 (text_lang):");
                     _targetLangConfig.Value = GUILayout.TextField(_targetLangConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                    
+                    GUILayout.Space(5);
+                    _skipJapaneseCheckConfig.Value = GUILayout.Toggle(_skipJapaneseCheckConfig.Value, "跳过日语检测（强制调用 TTS）", GUILayout.Height(elementHeight));
                     
                     GUILayout.Space(5);
                 }
@@ -799,8 +804,8 @@ namespace ChillAIMod
                 // 只有当 voiceText 不为空，且看起来像是日语时，才请求 TTS
                 // 简单的日语检测：看是否包含假名 (Hiragana/Katakana)
                 // 这是一个可选的保险措施
-                bool isJapanese = Regex.IsMatch(voiceText, @"[\u3040-\u309F\u30A0-\u30FF]");
-                Logger.LogInfo($"isJapanese: {isJapanese}");
+                bool isJapanese = _skipJapaneseCheckConfig.Value ? true : Regex.IsMatch(voiceText, @"[\u3040-\u309F\u30A0-\u30FF]");
+                Logger.LogInfo($"isJapanese: {isJapanese} (skipJapaneseCheck: {_skipJapaneseCheckConfig.Value})");
 
                 if (!string.IsNullOrEmpty(voiceText) && isJapanese)
                 {
