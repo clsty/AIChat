@@ -65,6 +65,11 @@ jobs:
           echo "Note: UnityEngine.UI.dll is kept in the repository as it is not available on NuGet"
           echo "      and is licensed under Unity Companion License (open source)"
 
+      - name: Download BepInEx
+        run: |
+          cd build-resource
+          bash download-bepinex.sh
+
       - name: Build AIChat.dll
         run: |
           make GAME_ROOT="${{ github.workspace }}/build-resource/buildenv/mokgamedir"

@@ -19,6 +19,50 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mono-complete
 
+      - name: Download Unity assemblies from NuGet
+        run: |
+          # Create a temporary project to download Unity assemblies
+          mkdir -p /tmp/unity-deps
+          cd /tmp/unity-deps
+          
+          # Create a project file to download UnityEngine.Modules
+          cat > UnityDeps.csproj << 'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <TargetFramework>netstandard2.0</TargetFramework>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" />
+            </ItemGroup>
+          </Project>
+          EOF
+          
+          # Restore the packages
+          dotnet restore
+          
+          # Copy Unity assemblies to the build environment
+          UNITY_PKG_PATH="$HOME/.nuget/packages/unityengine.modules/2021.3.33/lib/net45"
+          TARGET_DIR="${{ github.workspace }}/build-resource/buildenv/mokgamedir/Chill With You_Data/Managed"
+          
+          # Ensure target directory exists
+          mkdir -p "$TARGET_DIR"
+          
+          cp "$UNITY_PKG_PATH/UnityEngine.dll" "$TARGET_DIR/"
+          cp "$UNITY_PKG_PATH/UnityEngine.CoreModule.dll" "$TARGET_DIR/"
+          cp "$UNITY_PKG_PATH/UnityEngine.AnimationModule.dll" "$TARGET_DIR/"
+          cp "$UNITY_PKG_PATH/UnityEngine.AudioModule.dll" "$TARGET_DIR/"
+          cp "$UNITY_PKG_PATH/UnityEngine.IMGUIModule.dll" "$TARGET_DIR/"
+          cp "$UNITY_PKG_PATH/UnityEngine.InputLegacyModule.dll" "$TARGET_DIR/"
+          cp "$UNITY_PKG_PATH/UnityEngine.TextRenderingModule.dll" "$TARGET_DIR/"
+          cp "$UNITY_PKG_PATH/UnityEngine.UIModule.dll" "$TARGET_DIR/"
+          cp "$UNITY_PKG_PATH/UnityEngine.UnityWebRequestModule.dll" "$TARGET_DIR/"
+          cp "$UNITY_PKG_PATH/UnityEngine.UnityWebRequestAudioModule.dll" "$TARGET_DIR/"
+
+      - name: Download BepInEx
+        run: |
+          cd build-resource
+          bash download-bepinex.sh
+
       - name: Build AIChat.dll
         run: |
           make GAME_ROOT="${{ github.workspace }}/build-resource/buildenv/mokgamedir"

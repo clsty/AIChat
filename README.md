@@ -16,8 +16,10 @@
        Preview Build 属于预览版，比稳定版更新，相对来说有 bug 的概率会更高一些（实际结果也可能反过来）。
 
 2. 安装 BepInEx 前置
+   - 从 [BepInEx 官方仓库](https://github.com/BepInEx/BepInEx/releases) 下载 BepInEx v5.4.23.4（或更新版本）。
+     - 选择 `BepInEx_win_x64_5.4.23.4.zip`（或对应版本）。
    - 在 Steam 右键游戏 -> 管理 -> 浏览本地文件（或直接定位游戏根目录）。
-   - 将压缩包内的 `BepInEx_*` 下的内容复制到游戏根目录。
+   - 将 BepInEx 压缩包内的所有文件（`BepInEx` 文件夹、`winhttp.dll`、`doorstop_config.ini` 等）解压到游戏根目录。
      - Linux 用户请注意：Mod 能被加载的原理是，Windows 中的一些程序在启动时，同目录下的 DLL 文件（这里的是 `winhttp.dll`）比原本的 DLL 文件具有更高的优先级，从而被加载；但是在 Linux 下，Proton 自己的 DLL 文件具有更高的优先级，会无视同目录下的 `winhttp.dll`。所以，你需要在 Steam 的此游戏的设置里，将启动选项填写为 `WINEDLLOVERRIDES="winhttp=n,b" %command%` （其中 `winhttp` 就是 `winhttp.dll` 的文件名）。
    - 运行一次游戏。
      - 这一步用于生成插件目录结构，包括 `BepInEx` 目录下的 `config`、`core`、`patchers`、`plugins` 等目录。

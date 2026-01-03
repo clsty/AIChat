@@ -33,3 +33,7 @@ secrets.json
 build-resource/buildenv/mokgamedir/Chill With You_Data/Managed/UnityEngine.dll
 build-resource/buildenv/mokgamedir/Chill With You_Data/Managed/UnityEngine.*.dll
 !build-resource/buildenv/mokgamedir/Chill With You_Data/Managed/UnityEngine.UI.dll
+
+# BepInEx binaries are downloaded during build, not committed to repository
+build-resource/buildenv/mokgamedir/BepInEx/
+build-resource/assets/BepInEx_win_x64_*/
