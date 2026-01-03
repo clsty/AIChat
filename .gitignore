@@ -29,3 +29,7 @@ secrets.json
 *.cfg
 
 !/build-resource/**
+# Unity DLLs in build-resource (except UnityEngine.UI.dll) are downloaded from NuGet during build
+build-resource/buildenv/mokgamedir/Chill With You_Data/Managed/UnityEngine.dll
+build-resource/buildenv/mokgamedir/Chill With You_Data/Managed/UnityEngine.*.dll
+!build-resource/buildenv/mokgamedir/Chill With You_Data/Managed/UnityEngine.UI.dll
