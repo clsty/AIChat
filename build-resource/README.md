@@ -1,6 +1,33 @@
-这里存放构建 Mod 需要用到的资源文件，主要用于在线构建（本地构建可直接引用游戏所在目录）。
+# Build Resources
 
-## 文件说明
-- `buildenv` 中的文件用于构建 `AIChat.dll`（随后将其放入 `assets` 中进行打包）。
-  - `mokgamedir` 与游戏目录结构保持一致，但仅保留构建所需的部分（参见 [qzrs777/AIChat 仓库中的 AIChat/AIChat.csproj](https://github.com/qzrs777/AIChat/blob/main/AIChat/AIChat.csproj) 所引用的文件）来减小体积（注：`BepInEx` 采用软链接，不需要移除其中的任何文件）。
-- `assets` 中的文件用于直接打包。
+## Unity Assembly References
+
+Unity Engine assembly references (UnityEngine.dll and UnityEngine.*.dll modules) are obtained from NuGet during the build process to avoid copyright concerns.
+
+### Downloaded from NuGet (during CI build):
+- UnityEngine.dll
+- UnityEngine.CoreModule.dll
+- UnityEngine.AnimationModule.dll
+- UnityEngine.AudioModule.dll
+- UnityEngine.IMGUIModule.dll
+- UnityEngine.InputLegacyModule.dll
+- UnityEngine.TextRenderingModule.dll
+- UnityEngine.UIModule.dll
+- UnityEngine.UnityWebRequestModule.dll
+- UnityEngine.UnityWebRequestAudioModule.dll
+
+These are downloaded from the `UnityEngine.Modules` NuGet package (version 2021.3.33) in the CI workflow.
+
+### Kept in repository:
+- UnityEngine.UI.dll
+
+**Why is UnityEngine.UI.dll kept?**
+UnityEngine.UI.dll is not available as a NuGet package. It is part of Unity's UI Toolkit (UGUI) which is open source and licensed under the Unity Companion License. This license allows redistribution as part of Unity-based applications and games. Since this DLL is required for compilation and cannot be easily obtained from NuGet, it is kept in the repository.
+
+## Local Development
+
+When building locally, you can either:
+1. Run the same download process as CI (see `.github/workflows/build.yml`)
+2. Copy Unity DLLs from your game installation to `build-resource/buildenv/mokgamedir/Chill With You_Data/Managed/`
+
+The CI workflow automatically downloads these files before building, so no manual intervention is needed for automated builds.
