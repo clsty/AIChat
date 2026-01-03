@@ -1,0 +1,34 @@
+name: Build and Package AIChat Mod
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout AIChat
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mono-complete
+
+      - name: Build AIChat.dll
+        run: |
+          # 使用项目内置的 build-resource 目录作为构建环境
+          make GAME_ROOT="${{ github.workspace }}/build-resource/buildenv/mokgamedir"
+
+      - name: Copy AIChat.dll to assets
+        run: |
+          # 将生成的 dll 放入 assets 目录
+          cp AIChat/bin/Release/AIChat.dll build-resource/assets/
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AIChatMod
+          # 直接上传 assets 目录下的内容，GitHub 会将其打包为 AIChatMod.zip
+          path: build-resource/assets/
