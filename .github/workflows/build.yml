@@ -81,7 +81,8 @@ jobs:
       - name: Zip Artifact
         run: |
           cd build-resource/assets/
-          zip -r ../../AIChatMod.zip .
+          # Only package AIChat.dll and supporting files, not BepInEx
+          zip -r ../../AIChatMod.zip AIChat.dll api_v2_ex.py Voice_MainScenario_27_016.wav README.txt
 
       - name: Get commit info
         id: info
