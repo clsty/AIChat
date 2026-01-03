@@ -6,6 +6,9 @@ on:
     # 每日北京时间 11:00 (即 UTC 时间 03:00) 触发
     - cron: '0 3 * * *'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
