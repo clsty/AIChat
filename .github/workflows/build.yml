@@ -78,11 +78,15 @@ jobs:
         run: |
           cp AIChat/bin/Release/AIChat.dll build-resource/assets/
 
+      - name: Download BepInEx LICENSE
+        run: |
+          curl -s "https://raw.githubusercontent.com/BepInEx/BepInEx/master/LICENSE" -o build-resource/assets/BepInEx_LICENSE.txt
+          echo "BepInEx LICENSE downloaded to build-resource/assets/BepInEx_LICENSE.txt"
+
       - name: Zip Artifact
         run: |
           cd build-resource/assets/
-          # Only package AIChat.dll and supporting files, not BepInEx
-          zip -r ../../AIChatMod.zip AIChat.dll api_v2_ex.py Voice_MainScenario_27_016.wav README.txt
+          zip -r ../../AIChatMod.zip .
 
       - name: Get commit info
         id: info

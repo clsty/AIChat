@@ -2,22 +2,22 @@
 
 ===
 
-【重要】BepInEx 安装说明：
+【安装说明】
 
-本 Mod 需要 BepInEx 作为前置，但为避免版权问题，发布包中不再包含 BepInEx 文件。
-请按以下步骤手动安装 BepInEx：
+本压缩包已包含 BepInEx v5.4.23.4（开源项目，LGPL-2.1 许可证）。
+详见 BepInEx_LICENSE.txt 文件。
 
-1. 从 BepInEx 官方仓库下载：
-   https://github.com/BepInEx/BepInEx/releases
-   
-   下载 BepInEx_win_x64_5.4.23.4.zip（或更新版本）
+安装步骤：
 
-2. 将 BepInEx 压缩包内的所有文件解压到游戏根目录
+1. 将压缩包内的 BepInEx_win_x64_5.4.23.4 下的所有文件解压到游戏根目录
    （包括 BepInEx 文件夹、winhttp.dll、doorstop_config.ini 等）
 
-3. 运行一次游戏，生成必要的目录结构
+2. 运行一次游戏，生成必要的目录结构
 
-4. 把 AIChat.dll 放入 BepInEx/plugins，进游戏按 F9 设置 API Key 等
+3. 把 AIChat.dll 放入 BepInEx/plugins，进游戏按 F9 设置 API Key 等
+
+注意：Linux 用户需要在 Steam 的游戏设置里，将启动选项填写为：
+WINEDLLOVERRIDES="winhttp=n,b" %command%
 
 ===
 
