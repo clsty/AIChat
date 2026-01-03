@@ -804,7 +804,7 @@ namespace ChillAIMod
                 // 只有当 voiceText 不为空，且看起来像是日语时，才请求 TTS
                 // 简单的日语检测：看是否包含假名 (Hiragana/Katakana)
                 // 这是一个可选的保险措施
-                bool isJapanese = _skipJapaneseCheckConfig.Value ? true : Regex.IsMatch(voiceText, @"[\u3040-\u309F\u30A0-\u30FF]");
+                bool isJapanese = _skipJapaneseCheckConfig.Value || Regex.IsMatch(voiceText, @"[\u3040-\u309F\u30A0-\u30FF]");
                 Logger.LogInfo($"isJapanese: {isJapanese} (skipJapaneseCheck: {_skipJapaneseCheckConfig.Value})");
 
                 if (!string.IsNullOrEmpty(voiceText) && isJapanese)
