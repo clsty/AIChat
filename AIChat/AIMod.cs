@@ -48,6 +48,9 @@ namespace ChillAIMod
         private ConfigEntry<bool> _experimentalMemoryConfig;
         private HierarchicalMemory _hierarchicalMemory;
 
+        // --- 新增：高级设置展开状态 ---
+        private bool _showAdvancedSettings = false;
+
         // --- 录音相关变量 ---
         private AudioClip _recordingClip;
         private bool _isRecording = false;
@@ -396,6 +399,30 @@ namespace ChillAIMod
                 _LaunchTTSServiceConfig.Value = GUILayout.Toggle(_LaunchTTSServiceConfig.Value, "启动时自动运行 TTS 服务", GUILayout.Height(elementHeight));
                 _quitTTSServiceOnQuitConfig.Value = GUILayout.Toggle(_quitTTSServiceOnQuitConfig.Value, "退出时自动关闭 TTS 服务", GUILayout.Height(elementHeight));
                 _skipAudioPathCheckConfig.Value = GUILayout.Toggle(_skipAudioPathCheckConfig.Value, "不检测音频文件路径", GUILayout.Height(elementHeight));
+                
+                GUILayout.Space(5);
+                // --- 高级设置展开/折叠按钮 ---
+                string advancedBtnText = _showAdvancedSettings ? "🔽 收起高级设置" : "▶️ 展开高级设置";
+                if (GUILayout.Button(advancedBtnText, GUILayout.Height(elementHeight)))
+                {
+                    _showAdvancedSettings = !_showAdvancedSettings;
+                }
+                
+                // --- 高级设置内容 ---
+                if (_showAdvancedSettings)
+                {
+                    GUILayout.Space(5);
+                    GUILayout.Label("<b>高级设置:</b>");
+                    
+                    GUILayout.Label("音频文件语言 (prompt_lang):");
+                    _promptLangConfig.Value = GUILayout.TextField(_promptLangConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                    
+                    GUILayout.Label("输出语言 (text_lang):");
+                    _targetLangConfig.Value = GUILayout.TextField(_targetLangConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                    
+                    GUILayout.Space(5);
+                }
+                
                 GUILayout.EndVertical(); // <--- 必须结束！
 
                 GUILayout.Space(5);
