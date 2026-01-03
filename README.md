@@ -4,15 +4,15 @@
 
 ## 特色
 - 使用任意兼容的聊天 API（如 OpenRouter/OpenAI）生成对话文本。
-- 使用本地部署的 GPT-SoVITS/TTS 服务（通过 /tts）生成语音（无需将 TTS Key 传到云端）。
+- 使用本地部署的 GPT-SoVITS/TTS WebAPIv2 生成语音（无需将 TTS Key 传到云端）。
 - UI 内可调节音量、窗口尺寸、保存配置，支持拖拽调整大小与精确数值输入。
 - 要求 AI 输出严格格式：`[Emotion] ||| JAPANESE TEXT ||| CHINESE TRANSLATION`，插件根据情感切换动作并播放日语语音，显示中文字幕。
-- 若 AI 未按格式返回，只显示字幕并以思考动作代替语音（避免错误语言被 TTS 读出）。
+- 若 AI 未按格式返回，只显示字幕并以思考动作代替语音（避免错误语句被 TTS 读出）。
 
 ## 安装 Mod 本体
 1. 下载 Mod
    - 从 [Releases](https://github.com/qzrs777/AIChat/releases) 下载本项目发布的压缩包，并解压。
-     - 注：其核心部分 `AIChat.dll` 也可从本仓库源码构建得到。
+     - 注：其核心部分 `AIChat.dll` 也可从本仓库源码构建得到，参见文末。
 
 2. 安装 Mod
    - 在 Steam 右键游戏 -> 管理 -> 浏览本地文件（或直接定位游戏根目录）。
@@ -24,9 +24,15 @@
 3. 配置 Mod
    - 打开游戏，按 F9 键调出 Mod 的界面。
    - 配置好 API URL 与 API Key 以及 Model Name 并保存，此时就可以在“与聪音对话”的文本框里进行对话了（仅文字；下一节将配置语音）。
+     - API URL 示例：
+       - OpenRouter：`https://openrouter.ai/api/v1/chat/completions`
+       - Ollama：`http://127.0.0.1:11434/v1/chat/completions`
+       - Gemini：`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
 
 ## 语音配置（可选）
-本项目依赖 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) 的 WebAPI v2 来生成语音，而它的文档着重于 Webui 和在线云服务，就我们的目的（本地部署 WebAPI v2）而言较为混乱，所以这里提供较为详细的说明。
+本项目依赖 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) 的 WebAPI v2 来生成语音，
+而它的文档着重于 WebUI 和在线云服务，
+就我们的目的（本地部署 WebAPI v2）而言较为混乱，所以这里提供较为详细的说明。
 
 1. 安装 GPT-SoVITS：
    - Windows 用户：根据 GPT-SoVITS 的[文档](https://www.yuque.com/baicaigongchang1145haoyuangong/ib3g1e/dkxgpiy9zb96hob4)，直接下载整合包，解压后运行 `run_api.bat` 即可。如果没有 `run_api.bat`，可以自己建立一个 `run_api.bat.txt` 文件，编辑内容如下：
@@ -36,7 +42,7 @@
      pause
      ```
      然后重命名文件，将 `.txt` 后缀去掉即可。
-   - Linux 用户：Nvidia 显卡用户推荐使用 Docker，因为 Docker 具有稳定、易迁移、方便统一管理的特性。若不想使用 Docker 或显卡不是 Nvidia 的，则需要使用 conda 来运行，请自行参考 [GPT-SoVITS 的 README](https://github.com/RVC-Boss/GPT-SoVITS#linux)，**注意不是文档也不是 User guide**；也可参考本仓库的 `GPT-SoVITS-Linux` 目录。以下是使用 Docker 的步骤：
+   - Linux 用户：Nvidia 显卡用户推荐使用 Docker，因为 Docker 具有稳定、易迁移、方便统一管理的特性。若不想使用 Docker 或显卡不是 Nvidia 的，则需要使用 conda 来运行，请自行参考 [GPT-SoVITS 的 README](https://github.com/RVC-Boss/GPT-SoVITS#linux)，**注意不是文档也不是 User guide**；也可适当参考本仓库的 `GPT-SoVITS-Linux` 目录。以下是使用 Docker 的步骤：
      - 安装 Docker、Docker Compose、Nvidia Container Toolkit 三件套，方法分别参见 [Install | Docker Docs](https://docs.docker.com/engine/install/)、[Plugin | Docker Docs](https://docs.docker.com/compose/install/linux/#install-using-the-repository) 和 [Installing the NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)。
      - 克隆 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS)：
        ```bash
@@ -128,8 +134,8 @@ UI 其他
 - AI 返回中文但被 TTS 读出发音异常
   - 插件会检测是否含日文假名；若无假名则不会调用 TTS（仅显示字幕）。若你确实想让中文也生成语音，请确保 TTS 支持中文并在插件中调整 TargetLang。
 - TTS 报错或返回空音频
-  - 检查 TTS 服务日志、请求 JSON 格式（插件在请求体中会传入 text、text_lang、ref_audio_path、prompt_text、prompt_lang）。
-  - 插件日志（BepInEx log）会打印 TTS 错误和响应文本，作为排查依据。
+  - 检查 GPT-SoVITS 日志。
+  - Mod 日志（游戏目录下的 `BepInEx` 中的 `LogOutput.log`）会打印 TTS 错误和响应文本，作为排查依据，尤其注意请求发送的 JSON 数据（插件在请求体中会传入 `text`、`text_lang`、`ref_audio_path`、`prompt_text`、`prompt_lang`）。
 
 ## 安全与隐私
 - 聊天内容会发送到你配置的聊天 API（如 OpenRouter/OpenAI）；请注意 API Key 与隐私策略。
@@ -138,3 +144,15 @@ UI 其他
 ## 示例 Persona（默认已内置）
 插件内置了一个示例 SystemPrompt，示范如何强制 AI 始终以日语语音输出，并给出格式约束（请在设置中编辑以适配你的角色）。
 
+## 构建
+本 Mod 的核心 `AIChat.dll` 可从仓库构建。首先要克隆仓库到本地，然后：
+- 在 Windows 下可使用 Visual Studio 构建（方法略）；
+- 在 Linux 下可使用 `make` 构建。
+  - 安装依赖：
+    - `make`
+    - `msbuild`（没有 `msbuild` 可用 `xbuild` 代替，在 Debian 13 下 `mono-complete` 提供了 `xbuild`）
+  - 在仓库根目录下运行 `make` 即可，生成的文件位于 `AIChat/bin/Release/AIChat.dll` 。
+  - 提示：运行此命令可查看所有被 `.gitignore` 忽略的文件（在构建时所生成的文件一般都需要被忽略）：
+    ```bash
+    git ls-files --others --ignored --exclude-standard
+    ```

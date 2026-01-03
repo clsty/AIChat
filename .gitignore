@@ -17,6 +17,9 @@
 *.svnj
 *.scc
 
+# --- Makefile
+*.temp
+
 Libs/
 Assembly-CSharp.dll
 UnityEngine*.dll

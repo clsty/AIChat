@@ -92,7 +92,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AIMod.cs" />
-    <Compile Include="HierarchicalMemory.cs" />
+    <Compile Include="Core\HierarchicalMemory.cs" />
     <Compile Include="Core\AudioUtils.cs" />
     <Compile Include="Core\ResponseParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
