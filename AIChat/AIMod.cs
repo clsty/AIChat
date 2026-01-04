@@ -54,6 +54,9 @@ namespace ChillAIMod
         
         // --- 新增：日志记录设置 ---
         private ConfigEntry<bool> _logApiRequestBodyConfig;
+        
+        // --- 新增：API路径修正设置 ---
+        private ConfigEntry<bool> _fixApiPathForThinkModeConfig;
 
         // --- 新增：高级设置展开状态 ---
         private bool _showAdvancedSettings = false;
@@ -157,8 +160,12 @@ namespace ChillAIMod
                 "启用实验性分层记忆系统（递归摘要架构，自动压缩对话历史）");
             
             // 【新增：日志记录配置】
-            _logApiRequestBodyConfig = Config.Bind("4. Advanced", "LogApiRequestBody", false,
+            _logApiRequestBodyConfig = Config.Bind("1. General", "LogApiRequestBody", false,
                 "在日志中记录 AI API 请求体（用于调试）");
+            
+            // 【新增：API路径修正配置】
+            _fixApiPathForThinkModeConfig = Config.Bind("4. Advanced", "FixApiPathForThinkMode", true,
+                "指定深度思考模式时尝试修正 API 路径");
 
             // 新增：窗口大小配置
             // 我们希望窗口宽度是屏幕的 1/3，高度是屏幕的 1/3 (或者你喜欢的比例)
@@ -401,6 +408,10 @@ namespace ChillAIMod
                 }
                 GUILayout.Label("Model Name:");
                 _modelConfig.Value = GUILayout.TextField(_modelConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                
+                GUILayout.Space(5);
+                _logApiRequestBodyConfig.Value = GUILayout.Toggle(_logApiRequestBodyConfig.Value, "在日志中记录 AI API 请求体", GUILayout.Height(elementHeight));
+                
                 GUILayout.EndVertical();
 
                 GUILayout.Space(5);
@@ -423,7 +434,6 @@ namespace ChillAIMod
                 GUILayout.Space(5);
                 _LaunchTTSServiceConfig.Value = GUILayout.Toggle(_LaunchTTSServiceConfig.Value, "启动时自动运行 TTS 服务", GUILayout.Height(elementHeight));
                 _quitTTSServiceOnQuitConfig.Value = GUILayout.Toggle(_quitTTSServiceOnQuitConfig.Value, "退出时自动关闭 TTS 服务", GUILayout.Height(elementHeight));
-                _audioPathCheckConfig.Value = GUILayout.Toggle(_audioPathCheckConfig.Value, "从 Mod 侧检测音频文件路径", GUILayout.Height(elementHeight));
                 
                 GUILayout.Space(5);
                 // --- 高级设置展开/折叠按钮 ---
@@ -449,7 +459,10 @@ namespace ChillAIMod
                     _skipJapaneseCheckConfig.Value = GUILayout.Toggle(_skipJapaneseCheckConfig.Value, "跳过日语检测（强制调用 TTS）", GUILayout.Height(elementHeight));
                     
                     GUILayout.Space(5);
-                    _logApiRequestBodyConfig.Value = GUILayout.Toggle(_logApiRequestBodyConfig.Value, "在日志中记录 AI API 请求体", GUILayout.Height(elementHeight));
+                    _audioPathCheckConfig.Value = GUILayout.Toggle(_audioPathCheckConfig.Value, "从 Mod 侧检测音频文件路径", GUILayout.Height(elementHeight));
+                    
+                    GUILayout.Space(5);
+                    _fixApiPathForThinkModeConfig.Value = GUILayout.Toggle(_fixApiPathForThinkModeConfig.Value, "指定深度思考模式时尝试修正 API 路径", GUILayout.Height(elementHeight));
                     
                     GUILayout.Space(5);
                 }
@@ -1204,8 +1217,8 @@ namespace ChillAIMod
         {
             string baseUrl = _chatApiUrlConfig.Value;
             
-            // 如果think模式不是Default，需要使用Ollama原生API (/api/chat)
-            if (_thinkModeConfig.Value != ThinkMode.Default)
+            // 如果启用了API路径修正，且think模式不是Default，需要使用Ollama原生API (/api/chat)
+            if (_fixApiPathForThinkModeConfig.Value && _thinkModeConfig.Value != ThinkMode.Default)
             {
                 // 将 /v1/chat/completions 替换为 /api/chat
                 if (baseUrl.Contains("/v1/chat/completions"))
