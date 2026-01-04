@@ -17,11 +17,14 @@ using AIChat.Unity;
 
 namespace ChillAIMod
 {
+    public enum OllamaThinkMode { Default, Enable, Disable }
+
     [BepInPlugin("com.username.chillaimod", "Chill AI Mod", "1.1.0")]
     public class AIMod : BaseUnityPlugin
     {
         // ================= 【配置项】 =================
         private ConfigEntry<bool> _useLocalOllama;
+        private ConfigEntry<OllamaThinkMode> _ollamaThinkModeConfig;
         private ConfigEntry<string> _apiKeyConfig;
         private ConfigEntry<string> _modelConfig;
         private ConfigEntry<string> _sovitsUrlConfig;
@@ -126,6 +129,7 @@ namespace ChillAIMod
                 "https://openrouter.ai/api/v1/chat/completions",
                 "LLM API 地址 (支持 OpenAI/中转站)");
             _useLocalOllama = Config.Bind("1. General", "Use Loacal Ollama Model", false, "Use Loacal Ollama Model");
+            _ollamaThinkModeConfig = Config.Bind("1. General", "OllamaThinkMode", OllamaThinkMode.Default, "开启深度思考 (Enable/Disable/Default)");
             _apiKeyConfig = Config.Bind("1. General", "APIKey", "sk-or-v1-PasteYourKeyHere", "OpenRouter API Key");
             _modelConfig = Config.Bind("1. General", "ModelName", "openai/gpt-3.5-turbo", "LLM Model Name");
 
@@ -370,6 +374,21 @@ namespace ChillAIMod
                 GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
                 GUILayout.Label("<b>--- 基础配置 ---</b>");
                 _useLocalOllama.Value = GUILayout.Toggle(_useLocalOllama.Value, "使用本地Ollama模型", GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                
+                // 【新增：Ollama 深度思考模式选项】
+                if (_useLocalOllama.Value)
+                {
+                    GUILayout.Space(5);
+                    GUILayout.Label("开启深度思考:");
+                    string[] thinkModeOptions = { "默认", "开启", "否" };
+                    int currentMode = (int)_ollamaThinkModeConfig.Value;
+                    int newMode = GUILayout.SelectionGrid(currentMode, thinkModeOptions, 3, GUILayout.Height(elementHeight));
+                    if (newMode != currentMode)
+                    {
+                        _ollamaThinkModeConfig.Value = (OllamaThinkMode)newMode;
+                    }
+                }
+                
                 GUILayout.Label("API URL:");
                 _chatApiUrlConfig.Value = GUILayout.TextField(_chatApiUrlConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                 if (!_useLocalOllama.Value) {
@@ -693,6 +712,21 @@ namespace ChillAIMod
             
             string jsonBody = "";
             string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
+            
+            // 【新增：Ollama 深度思考参数】
+            if (_useLocalOllama.Value)
+            {
+                if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Enable)
+                {
+                    extraJson += @",""think"": true";
+                }
+                else if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Disable)
+                {
+                    extraJson += @",""think"": false";
+                }
+                // Default 模式不添加 think 参数
+            }
+            
             if (modelName.Contains("gemma")) {
                 // 将 persona 作为背景信息放在 user 消息的最前面
                 string finalPrompt = $"[System Instruction]\n{persona}\n\n[User Message]\n{promptWithMemory}";
@@ -1102,6 +1136,20 @@ namespace ChillAIMod
             string apiKey = _apiKeyConfig.Value;
             string modelName = _modelConfig.Value;
             string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
+            
+            // 【新增：Ollama 深度思考参数】
+            if (_useLocalOllama.Value)
+            {
+                if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Enable)
+                {
+                    extraJson += @",""think"": true";
+                }
+                else if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Disable)
+                {
+                    extraJson += @",""think"": false";
+                }
+                // Default 模式不添加 think 参数
+            }
 
             // 构建请求（gemma 风格：system instruction + user message 合并为一个 user 角色）
             string finalPrompt = $"[System Instruction]\n你是一个专业的文本总结助手。\n\n[User Message]\n{prompt}";
