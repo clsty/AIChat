@@ -17,14 +17,14 @@ using AIChat.Unity;
 
 namespace ChillAIMod
 {
-    public enum OllamaThinkMode { Default, Enable, Disable }
+    public enum ThinkMode { Default, Enable, Disable }
 
     [BepInPlugin("com.username.chillaimod", "Chill AI Mod", "1.1.0")]
     public class AIMod : BaseUnityPlugin
     {
         // ================= 【配置项】 =================
         private ConfigEntry<bool> _useLocalOllama;
-        private ConfigEntry<OllamaThinkMode> _ollamaThinkModeConfig;
+        private ConfigEntry<ThinkMode> _thinkModeConfig;
         private ConfigEntry<string> _apiKeyConfig;
         private ConfigEntry<string> _modelConfig;
         private ConfigEntry<string> _sovitsUrlConfig;
@@ -129,7 +129,7 @@ namespace ChillAIMod
                 "https://openrouter.ai/api/v1/chat/completions",
                 "LLM API 地址 (支持 OpenAI/中转站)");
             _useLocalOllama = Config.Bind("1. General", "Use Loacal Ollama Model", false, "Use Loacal Ollama Model");
-            _ollamaThinkModeConfig = Config.Bind("1. General", "OllamaThinkMode", OllamaThinkMode.Default, "开启深度思考 (Enable/Disable/Default)");
+            _thinkModeConfig = Config.Bind("1. General", "ThinkMode", ThinkMode.Default, "深度思考模式 (Enable/Disable/Default)");
             _apiKeyConfig = Config.Bind("1. General", "APIKey", "sk-or-v1-PasteYourKeyHere", "OpenRouter API Key");
             _modelConfig = Config.Bind("1. General", "ModelName", "openai/gpt-3.5-turbo", "LLM Model Name");
 
@@ -375,18 +375,15 @@ namespace ChillAIMod
                 GUILayout.Label("<b>--- 基础配置 ---</b>");
                 _useLocalOllama.Value = GUILayout.Toggle(_useLocalOllama.Value, "使用本地Ollama模型", GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                 
-                // 【新增：Ollama 深度思考模式选项】
-                if (_useLocalOllama.Value)
+                // 【深度思考模式选项】
+                GUILayout.Space(5);
+                GUILayout.Label("深度思考模式:");
+                string[] thinkModeOptions = { "默认", "开启", "否" };
+                int currentMode = (int)_thinkModeConfig.Value;
+                int newMode = GUILayout.SelectionGrid(currentMode, thinkModeOptions, 3, GUILayout.Height(elementHeight));
+                if (newMode != currentMode)
                 {
-                    GUILayout.Space(5);
-                    GUILayout.Label("开启深度思考:");
-                    string[] thinkModeOptions = { "默认", "开启", "否" };
-                    int currentMode = (int)_ollamaThinkModeConfig.Value;
-                    int newMode = GUILayout.SelectionGrid(currentMode, thinkModeOptions, 3, GUILayout.Height(elementHeight));
-                    if (newMode != currentMode)
-                    {
-                        _ollamaThinkModeConfig.Value = (OllamaThinkMode)newMode;
-                    }
+                    _thinkModeConfig.Value = (ThinkMode)newMode;
                 }
                 
                 GUILayout.Label("API URL:");
@@ -713,7 +710,7 @@ namespace ChillAIMod
             string jsonBody = "";
             string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
             
-            // 【新增：Ollama 深度思考参数】
+            // 【深度思考参数】
             extraJson += GetThinkParameterJson();
             
             if (modelName.Contains("gemma")) {
@@ -725,6 +722,10 @@ namespace ChillAIMod
                 jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""system"", ""content"": ""{ResponseParser.EscapeJson(persona)}"" }}, {{ ""role"": ""user"", ""content"": ""{ResponseParser.EscapeJson(promptWithMemory)}"" }} ]{extraJson} }}";
             }
             // string jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""system"", ""content"": ""{EscapeJson(persona)}"" }}, {{ ""role"": ""user"", ""content"": ""{EscapeJson(promptWithMemory)}"" }} ]{extraJson} }}";
+            
+            // 【日志】打印完整的请求体
+            Logger.LogInfo($"[API请求] 完整请求体:\n{jsonBody}");
+            
             string fullResponse = "";
 
             // 3. 发送 Chat 请求
@@ -1126,7 +1127,7 @@ namespace ChillAIMod
             string modelName = _modelConfig.Value;
             string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
             
-            // 【新增：Ollama 深度思考参数】
+            // 【深度思考参数】
             extraJson += GetThinkParameterJson();
 
             // 构建请求（gemma 风格：system instruction + user message 合并为一个 user 角色）
@@ -1140,6 +1141,7 @@ namespace ChillAIMod
 
             Logger.LogInfo($"[HierarchicalMemory] 发送总结请求到: {_chatApiUrlConfig.Value}");
             Logger.LogInfo($"[HierarchicalMemory] Prompt 预览: {prompt.Substring(0, Math.Min(200, prompt.Length))}...");
+            Logger.LogInfo($"[HierarchicalMemory] 完整请求体:\n{jsonBody}");
 
             using (UnityWebRequest request = new UnityWebRequest(_chatApiUrlConfig.Value, "POST"))
             {
@@ -1178,22 +1180,19 @@ namespace ChillAIMod
         }
 
         /// <summary>
-        /// 获取 Ollama 深度思考参数的 JSON 字符串
+        /// 获取深度思考参数的 JSON 字符串
         /// </summary>
         private string GetThinkParameterJson()
         {
-            if (_useLocalOllama.Value)
+            if (_thinkModeConfig.Value == ThinkMode.Enable)
             {
-                if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Enable)
-                {
-                    return @",""think"": true";
-                }
-                else if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Disable)
-                {
-                    return @",""think"": false";
-                }
-                // Default 模式不添加 think 参数
+                return @",""think"": true";
             }
+            else if (_thinkModeConfig.Value == ThinkMode.Disable)
+            {
+                return @",""think"": false";
+            }
+            // Default 模式不添加 think 参数
             return "";
         }
 
