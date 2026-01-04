@@ -23,7 +23,7 @@ namespace ChillAIMod
     public class AIMod : BaseUnityPlugin
     {
         // ================= 【配置项】 =================
-        private ConfigEntry<bool> _useLocalOllama;
+        private ConfigEntry<bool> _useOllama;
         private ConfigEntry<ThinkMode> _thinkModeConfig;
         private ConfigEntry<string> _apiKeyConfig;
         private ConfigEntry<string> _modelConfig;
@@ -134,7 +134,7 @@ namespace ChillAIMod
             _chatApiUrlConfig = Config.Bind("1. General", "ApiUrl",
                 "https://openrouter.ai/api/v1/chat/completions",
                 "LLM API 地址 (支持 OpenAI/中转站)");
-            _useLocalOllama = Config.Bind("1. General", "Use Loacal Ollama Model", false, "Use Loacal Ollama Model");
+            _useOllama = Config.Bind("1. General", "Use Ollama Model", false, "Use Ollama Model");
             _thinkModeConfig = Config.Bind("1. General", "ThinkMode", ThinkMode.Default, "深度思考模式 (Enable/Disable/Default)");
             _apiKeyConfig = Config.Bind("1. General", "APIKey", "sk-or-v1-PasteYourKeyHere", "OpenRouter API Key");
             _modelConfig = Config.Bind("1. General", "ModelName", "openai/gpt-3.5-turbo", "LLM Model Name");
@@ -387,12 +387,12 @@ namespace ChillAIMod
                 // --- 1. 基础配置 Box ---
                 GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
                 GUILayout.Label("<b>--- 基础配置 ---</b>");
-                _useLocalOllama.Value = GUILayout.Toggle(_useLocalOllama.Value, "使用本地Ollama模型", GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                _useOllama.Value = GUILayout.Toggle(_useOllama.Value, "使用 Ollama API", GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                 
                 // 【深度思考模式选项】
                 GUILayout.Space(5);
                 GUILayout.Label("深度思考模式:");
-                string[] thinkModeOptions = { "默认", "开启", "否" };
+                string[] thinkModeOptions = { "不指定", "启用", "禁用" };
                 int currentMode = (int)_thinkModeConfig.Value;
                 int newMode = GUILayout.SelectionGrid(currentMode, thinkModeOptions, 3, GUILayout.Height(elementHeight));
                 if (newMode != currentMode)
@@ -400,17 +400,19 @@ namespace ChillAIMod
                     _thinkModeConfig.Value = (ThinkMode)newMode;
                 }
                 
-                GUILayout.Label("API URL:");
+                GUILayout.Label("API URL：");
                 _chatApiUrlConfig.Value = GUILayout.TextField(_chatApiUrlConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
-                if (!_useLocalOllama.Value) {
-                    GUILayout.Label("API Key:");
+                if (!_useOllama.Value) {
+                    GUILayout.Label("API Key：");
                     _apiKeyConfig.Value = GUILayout.TextField(_apiKeyConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                 }
-                GUILayout.Label("Model Name:");
+                GUILayout.Label("模型名称：");
                 _modelConfig.Value = GUILayout.TextField(_modelConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                 
                 GUILayout.Space(5);
                 _logApiRequestBodyConfig.Value = GUILayout.Toggle(_logApiRequestBodyConfig.Value, "在日志中记录 AI API 请求体", GUILayout.Height(elementHeight));
+                GUILayout.Space(5);
+                _fixApiPathForThinkModeConfig.Value = GUILayout.Toggle(_fixApiPathForThinkModeConfig.Value, "指定深度思考模式时尝试修正 API 路径", GUILayout.Height(elementHeight));
                 
                 GUILayout.EndVertical();
 
@@ -419,16 +421,16 @@ namespace ChillAIMod
                 // --- 2. 语音配置 Box ---
                 GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
                 GUILayout.Label("<b>--- 语音配置 ---</b>");
-                GUILayout.Label("TTS Service Url:");
+                GUILayout.Label("TTS 服务 URL：");
                 _sovitsUrlConfig.Value = GUILayout.TextField(_sovitsUrlConfig.Value);
-                GUILayout.Label("音频路径 (.wav):");
+                GUILayout.Label("音频路径（*.wav）：");
                 // 路径通常很长，必须加 MinWidth(50f)
                 _refAudioPathConfig.Value = GUILayout.TextField(_refAudioPathConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                 
-                GUILayout.Label("音频台词:");
+                GUILayout.Label("音频台词：");
                 _promptTextConfig.Value = GUILayout.TextArea(_promptTextConfig.Value, GUILayout.Height(elementHeight * 3), GUILayout.MinWidth(50f));
                 
-                GUILayout.Label("TTS 服务路径:");
+                GUILayout.Label("TTS 服务脚本文件路径：");
                 _TTSServicePathConfig.Value = GUILayout.TextField(_TTSServicePathConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
 
                 GUILayout.Space(5);
@@ -462,9 +464,6 @@ namespace ChillAIMod
                     _audioPathCheckConfig.Value = GUILayout.Toggle(_audioPathCheckConfig.Value, "从 Mod 侧检测音频文件路径", GUILayout.Height(elementHeight));
                     
                     GUILayout.Space(5);
-                    _fixApiPathForThinkModeConfig.Value = GUILayout.Toggle(_fixApiPathForThinkModeConfig.Value, "指定深度思考模式时尝试修正 API 路径", GUILayout.Height(elementHeight));
-                    
-                    GUILayout.Space(5);
                 }
                 
                 GUILayout.EndVertical(); // <--- 必须结束！
@@ -492,7 +491,7 @@ namespace ChillAIMod
                 // 第二行：输入框+按钮
                 GUILayout.Space(5);
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("手动输入:", GUILayout.Width(labelWidth), GUILayout.Height(elementHeight));
+                GUILayout.Label("手动输入：", GUILayout.Width(labelWidth), GUILayout.Height(elementHeight));
 
                 _tempVolumeString = GUILayout.TextField(_tempVolumeString, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f)); 
                 if (GUILayout.Button("应用", GUILayout.Width(btnWidth), GUILayout.Height(elementHeight)))
@@ -515,9 +514,9 @@ namespace ChillAIMod
                 GUILayout.Label("<b>--- 界面配置 ---</b>");
 
                 // 宽度设置
-                GUILayout.Label($"当前宽度: {_windowWidthConfig.Value:F0}px");
+                GUILayout.Label($"当前宽度：{_windowWidthConfig.Value:F0}px");
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("新宽度:", GUILayout.Width(labelWidth), GUILayout.Height(elementHeight));
+                GUILayout.Label("新宽度：", GUILayout.Width(labelWidth), GUILayout.Height(elementHeight));
                 
                 // 【核心修改】允许缩小
                 _tempWidthString = GUILayout.TextField(_tempWidthString, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
@@ -583,7 +582,7 @@ namespace ChillAIMod
 
             // === 对话区域 ===
             GUILayout.Space(10);
-            GUILayout.Label("<b>与聪音对话:</b>");
+            GUILayout.Label("<b>与聪音对话：</b>");
 
             GUI.backgroundColor = Color.white;
 
@@ -731,7 +730,7 @@ namespace ChillAIMod
             Logger.LogInfo($"[发送给LLM的完整内容]\n========================================\n[System Prompt]\n{persona}\n\n[User Content + Memory]\n{promptWithMemory}\n========================================");
             
             string jsonBody = "";
-            string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
+            string extraJson = _useOllama.Value ? $@",""stream"": false" : "";
             
             // 【深度思考参数】
             extraJson += GetThinkParameterJson();
@@ -741,7 +740,7 @@ namespace ChillAIMod
                 string finalPrompt = $"[System Instruction]\n{persona}\n\n[User Message]\n{promptWithMemory}";
                 jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""user"", ""content"": ""{ResponseParser.EscapeJson(finalPrompt)}"" }} ]{extraJson} }}";
             } else {
-                // Gemini 或 Local Ollama (如果是 Llama3 等) 通常支持 system role
+                // Gemini 或 Ollama (如果是 Llama3 等) 通常支持 system role
                 jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""system"", ""content"": ""{ResponseParser.EscapeJson(persona)}"" }}, {{ ""role"": ""user"", ""content"": ""{ResponseParser.EscapeJson(promptWithMemory)}"" }} ]{extraJson} }}";
             }
             // string jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""system"", ""content"": ""{EscapeJson(persona)}"" }}, {{ ""role"": ""user"", ""content"": ""{EscapeJson(promptWithMemory)}"" }} ]{extraJson} }}";
@@ -762,7 +761,7 @@ namespace ChillAIMod
                 request.uploadHandler = new UploadHandlerRaw(bodyRaw);
                 request.downloadHandler = new DownloadHandlerBuffer();
                 request.SetRequestHeader("Content-Type", "application/json");
-                if (!_useLocalOllama.Value)
+                if (!_useOllama.Value)
                 {
                     request.SetRequestHeader("Authorization", "Bearer " + apiKey);
                 }
@@ -771,7 +770,7 @@ namespace ChillAIMod
                 if (request.result == UnityWebRequest.Result.Success)
                 {
                     Logger.LogInfo($"获取的完整回复：\n\t{request.downloadHandler.text}");
-                    if (_useLocalOllama.Value)
+                    if (_useOllama.Value)
                     {
                         fullResponse = ResponseParser.ExtractContentFromOllama(request.downloadHandler.text , Logger);
                         Logger.LogInfo($"ExtractContentFromOllama: \n\t{fullResponse}");
@@ -1152,7 +1151,7 @@ namespace ChillAIMod
             
             string apiKey = _apiKeyConfig.Value;
             string modelName = _modelConfig.Value;
-            string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
+            string extraJson = _useOllama.Value ? $@",""stream"": false" : "";
             
             // 【深度思考参数】
             extraJson += GetThinkParameterJson();
@@ -1180,7 +1179,7 @@ namespace ChillAIMod
                 request.uploadHandler = new UploadHandlerRaw(bodyRaw);
                 request.downloadHandler = new DownloadHandlerBuffer();
                 request.SetRequestHeader("Content-Type", "application/json");
-                if (!_useLocalOllama.Value)
+                if (!_useOllama.Value)
                 {
                     request.SetRequestHeader("Authorization", "Bearer " + apiKey);
                 }
@@ -1192,7 +1191,7 @@ namespace ChillAIMod
                 {
                     Logger.LogInfo($"[HierarchicalMemory] API 响应成功: {request.downloadHandler.text.Substring(0, Math.Min(200, request.downloadHandler.text.Length))}...");
                     
-                    string response = _useLocalOllama.Value
+                    string response = _useOllama.Value
                         ? ResponseParser.ExtractContentFromOllama(request.downloadHandler.text , Logger)
                         : ResponseParser.ExtractContentRegex(request.downloadHandler.text);
 
@@ -1224,7 +1223,7 @@ namespace ChillAIMod
                 if (baseUrl.Contains("/v1/chat/completions"))
                 {
                     baseUrl = baseUrl.Replace("/v1/chat/completions", "/api/chat");
-                    Logger.LogInfo($"[Think Mode] 切换到Ollama原生API: {baseUrl}");
+                    Logger.LogInfo($"[Think Mode] 切换到 Ollama 原生 API: {baseUrl}");
                 }
                 // 如果URL已经是 /api/chat 或其他格式，保持不变
             }
