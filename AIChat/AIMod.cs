@@ -661,7 +661,7 @@ namespace ChillAIMod
             
             _playerInput = GUILayout.TextArea(_playerInput, largeInputStyle, GUILayout.Height(dynamicInputHeight));
             
-            // 在 TextArea 渲染后清空并发送消息
+            // 在 TextArea 渲染后，清空输入框并发送消息
             if (shouldSendMessage)
             {
                 _playerInput = ""; // 清空输入框
