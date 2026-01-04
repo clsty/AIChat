@@ -51,6 +51,9 @@ namespace ChillAIMod
         // --- 新增：实验性分层记忆系统 ---
         private ConfigEntry<bool> _experimentalMemoryConfig;
         private HierarchicalMemory _hierarchicalMemory;
+        
+        // --- 新增：日志记录设置 ---
+        private ConfigEntry<bool> _logApiRequestBodyConfig;
 
         // --- 新增：高级设置展开状态 ---
         private bool _showAdvancedSettings = false;
@@ -152,6 +155,10 @@ namespace ChillAIMod
             // 【新增：实验性分层记忆系统配置】
             _experimentalMemoryConfig = Config.Bind("3. Persona", "ExperimentalMemory", false, 
                 "启用实验性分层记忆系统（递归摘要架构，自动压缩对话历史）");
+            
+            // 【新增：日志记录配置】
+            _logApiRequestBodyConfig = Config.Bind("4. Advanced", "LogApiRequestBody", false,
+                "在日志中记录 AI API 请求体（用于调试）");
 
             // 新增：窗口大小配置
             // 我们希望窗口宽度是屏幕的 1/3，高度是屏幕的 1/3 (或者你喜欢的比例)
@@ -442,6 +449,9 @@ namespace ChillAIMod
                     _skipJapaneseCheckConfig.Value = GUILayout.Toggle(_skipJapaneseCheckConfig.Value, "跳过日语检测（强制调用 TTS）", GUILayout.Height(elementHeight));
                     
                     GUILayout.Space(5);
+                    _logApiRequestBodyConfig.Value = GUILayout.Toggle(_logApiRequestBodyConfig.Value, "在日志中记录 AI API 请求体", GUILayout.Height(elementHeight));
+                    
+                    GUILayout.Space(5);
                 }
                 
                 GUILayout.EndVertical(); // <--- 必须结束！
@@ -723,13 +733,17 @@ namespace ChillAIMod
             }
             // string jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""system"", ""content"": ""{EscapeJson(persona)}"" }}, {{ ""role"": ""user"", ""content"": ""{EscapeJson(promptWithMemory)}"" }} ]{extraJson} }}";
             
-            // 【日志】打印完整的请求体
-            Logger.LogInfo($"[API请求] 完整请求体:\n{jsonBody}");
+            // 【日志】打印完整的请求体（如果启用）
+            if (_logApiRequestBodyConfig.Value)
+            {
+                Logger.LogInfo($"[API请求] 完整请求体:\n{jsonBody}");
+            }
             
             string fullResponse = "";
 
             // 3. 发送 Chat 请求
-            using (UnityWebRequest request = new UnityWebRequest(_chatApiUrlConfig.Value, "POST"))
+            string apiUrl = GetApiUrlForThinkMode();
+            using (UnityWebRequest request = new UnityWebRequest(apiUrl, "POST"))
             {
                 byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
                 request.uploadHandler = new UploadHandlerRaw(bodyRaw);
@@ -1141,9 +1155,13 @@ namespace ChillAIMod
 
             Logger.LogInfo($"[HierarchicalMemory] 发送总结请求到: {_chatApiUrlConfig.Value}");
             Logger.LogInfo($"[HierarchicalMemory] Prompt 预览: {prompt.Substring(0, Math.Min(200, prompt.Length))}...");
-            Logger.LogInfo($"[HierarchicalMemory] 完整请求体:\n{jsonBody}");
+            if (_logApiRequestBodyConfig.Value)
+            {
+                Logger.LogInfo($"[HierarchicalMemory] 完整请求体:\n{jsonBody}");
+            }
 
-            using (UnityWebRequest request = new UnityWebRequest(_chatApiUrlConfig.Value, "POST"))
+            string apiUrl = GetApiUrlForThinkMode();
+            using (UnityWebRequest request = new UnityWebRequest(apiUrl, "POST"))
             {
                 byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
                 request.uploadHandler = new UploadHandlerRaw(bodyRaw);
@@ -1177,6 +1195,28 @@ namespace ChillAIMod
             }
             
             Logger.LogInfo("[HierarchicalMemory] <<< 总结调用完成");
+        }
+
+        /// <summary>
+        /// 获取适合当前think模式的API URL
+        /// </summary>
+        private string GetApiUrlForThinkMode()
+        {
+            string baseUrl = _chatApiUrlConfig.Value;
+            
+            // 如果think模式不是Default，需要使用Ollama原生API (/api/chat)
+            if (_thinkModeConfig.Value != ThinkMode.Default)
+            {
+                // 将 /v1/chat/completions 替换为 /api/chat
+                if (baseUrl.Contains("/v1/chat/completions"))
+                {
+                    baseUrl = baseUrl.Replace("/v1/chat/completions", "/api/chat");
+                    Logger.LogInfo($"[Think Mode] 切换到Ollama原生API: {baseUrl}");
+                }
+                // 如果URL已经是 /api/chat 或其他格式，保持不变
+            }
+            
+            return baseUrl;
         }
 
         /// <summary>
