@@ -631,35 +631,40 @@ namespace ChillAIMod
             largeInputStyle.wordWrap = true;
             largeInputStyle.alignment = TextAnchor.UpperLeft;
 
-            GUI.skin.textArea.wordWrap = true; 
-            _playerInput = GUILayout.TextArea(_playerInput, largeInputStyle, GUILayout.Height(dynamicInputHeight));
-
-            // 处理快捷键（回车和 Shift+回车）
+            GUI.skin.textArea.wordWrap = true;
+            
+            // 处理快捷键（回车和 Shift+回车）- 必须在 TextArea 之前处理
             Event currentEvent = Event.current;
-            if (currentEvent.type == EventType.KeyDown && currentEvent.keyCode == KeyCode.Return)
+            bool shouldInterceptEnter = false;
+            
+            if (currentEvent.type == EventType.KeyDown && 
+                currentEvent.keyCode == KeyCode.Return && 
+                !_isProcessing &&
+                !string.IsNullOrEmpty(_playerInput))
             {
                 // 检测是否按下 Shift 键
                 bool shiftPressed = currentEvent.shift;
                 
-                // 根据配置决定行为
+                // 根据配置决定是否应该发送
+                // 默认模式（_reverseEnterBehaviorConfig = false）：Enter 发送，Shift+Enter 换行
+                // 反转模式（_reverseEnterBehaviorConfig = true）：Enter 换行，Shift+Enter 发送
                 bool shouldSend = _reverseEnterBehaviorConfig.Value ? shiftPressed : !shiftPressed;
                 
                 if (shouldSend)
                 {
-                    // 发送消息
-                    if (!string.IsNullOrEmpty(_playerInput) && !_isProcessing)
-                    {
-                        StartCoroutine(AIProcessRoutine(_playerInput));
-                        _playerInput = "";
-                        currentEvent.Use(); // 消费事件，防止添加换行
-                    }
-                }
-                else
-                {
-                    // 换行（Unity TextArea 默认会处理换行，但我们需要确保不会触发其他行为）
-                    // 不消费事件，让 TextArea 自然处理换行
+                    shouldInterceptEnter = true;
                 }
             }
+            
+            // 如果需要发送消息，在渲染 TextArea 之前拦截事件
+            if (shouldInterceptEnter)
+            {
+                StartCoroutine(AIProcessRoutine(_playerInput));
+                _playerInput = "";
+                currentEvent.Use(); // 消费事件，防止 TextArea 处理
+            }
+            
+            _playerInput = GUILayout.TextArea(_playerInput, largeInputStyle, GUILayout.Height(dynamicInputHeight));
 
             GUILayout.Space(5);
             GUI.backgroundColor = _isProcessing ? Color.gray : Color.cyan;
