@@ -714,18 +714,7 @@ namespace ChillAIMod
             string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
             
             // 【新增：Ollama 深度思考参数】
-            if (_useLocalOllama.Value)
-            {
-                if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Enable)
-                {
-                    extraJson += @",""think"": true";
-                }
-                else if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Disable)
-                {
-                    extraJson += @",""think"": false";
-                }
-                // Default 模式不添加 think 参数
-            }
+            extraJson += GetThinkParameterJson();
             
             if (modelName.Contains("gemma")) {
                 // 将 persona 作为背景信息放在 user 消息的最前面
@@ -1138,18 +1127,7 @@ namespace ChillAIMod
             string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
             
             // 【新增：Ollama 深度思考参数】
-            if (_useLocalOllama.Value)
-            {
-                if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Enable)
-                {
-                    extraJson += @",""think"": true";
-                }
-                else if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Disable)
-                {
-                    extraJson += @",""think"": false";
-                }
-                // Default 模式不添加 think 参数
-            }
+            extraJson += GetThinkParameterJson();
 
             // 构建请求（gemma 风格：system instruction + user message 合并为一个 user 角色）
             string finalPrompt = $"[System Instruction]\n你是一个专业的文本总结助手。\n\n[User Message]\n{prompt}";
@@ -1197,6 +1175,26 @@ namespace ChillAIMod
             }
             
             Logger.LogInfo("[HierarchicalMemory] <<< 总结调用完成");
+        }
+
+        /// <summary>
+        /// 获取 Ollama 深度思考参数的 JSON 字符串
+        /// </summary>
+        private string GetThinkParameterJson()
+        {
+            if (_useLocalOllama.Value)
+            {
+                if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Enable)
+                {
+                    return @",""think"": true";
+                }
+                else if (_ollamaThinkModeConfig.Value == OllamaThinkMode.Disable)
+                {
+                    return @",""think"": false";
+                }
+                // Default 模式不添加 think 参数
+            }
+            return "";
         }
 
         /// <summary>
