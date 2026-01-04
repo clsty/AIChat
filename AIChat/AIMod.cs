@@ -636,7 +636,7 @@ namespace ChillAIMod
             // 处理快捷键（回车和 Shift+回车）
             Event keyEvent = Event.current;
             bool shouldSendMessage = false;
-            string messageToSend = null;
+            string messageToSend = "";
             
             if (keyEvent.type == EventType.KeyDown && 
                 keyEvent.keyCode == KeyCode.Return && 
@@ -662,7 +662,7 @@ namespace ChillAIMod
             _playerInput = GUILayout.TextArea(_playerInput, largeInputStyle, GUILayout.Height(dynamicInputHeight));
             
             // 在 TextArea 渲染后清空并发送消息
-            if (shouldSendMessage)
+            if (shouldSendMessage && !string.IsNullOrEmpty(messageToSend))
             {
                 _playerInput = ""; // 清空输入框
                 StartCoroutine(AIProcessRoutine(messageToSend));
