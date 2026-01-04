@@ -648,12 +648,7 @@ namespace ChillAIMod
                 // 根据配置决定是否应该发送
                 // 默认模式（_reverseEnterBehaviorConfig = false）：Enter 发送，Shift+Enter 换行
                 // 反转模式（_reverseEnterBehaviorConfig = true）：Enter 换行，Shift+Enter 发送
-                bool shouldSend = _reverseEnterBehaviorConfig.Value ? shiftPressed : !shiftPressed;
-                
-                if (shouldSend)
-                {
-                    shouldInterceptEnter = true;
-                }
+                shouldInterceptEnter = _reverseEnterBehaviorConfig.Value ? shiftPressed : !shiftPressed;
             }
             
             // 如果需要发送消息，在渲染 TextArea 之前拦截事件
