@@ -14,6 +14,7 @@ using System.Diagnostics;
 using AIChat.Core;
 using AIChat.Services;
 using AIChat.Unity;
+using System.Collections.Generic;
 
 namespace ChillAIMod
 {
@@ -737,7 +738,8 @@ namespace ChillAIMod
             if (originalTextTrans == null) { _isProcessing = false; yield break; }
             GameObject originalTextObj = originalTextTrans.gameObject;
             GameObject parentObj = originalTextObj.transform.parent.gameObject;
-            UIHelper.ForceShowWindow(originalTextObj);
+            Dictionary<GameObject, bool> uiStatusMap = new Dictionary<GameObject, bool>();
+            UIHelper.ForceShowWindow(originalTextObj, uiStatusMap);
             originalTextObj.SetActive(false);
             GameObject myTextObj = UIHelper.CreateOverlayText(parentObj);
             Text myText = myTextObj.GetComponent<Text>();
@@ -820,8 +822,7 @@ namespace ChillAIMod
                     yield return new WaitForSecondsRealtime(3.0f);
 
                     // 手动执行清理工作，恢复游戏原本状态
-                    if (myTextObj != null) Destroy(myTextObj);
-                    if (originalTextObj != null) originalTextObj.SetActive(true);
+                    UIHelper.RestoreUiStatus(uiStatusMap, myTextObj, originalTextObj);
                     _isProcessing = false;
                     yield break;
                 }
@@ -936,8 +937,7 @@ namespace ChillAIMod
             }
 
             // 5. 清理
-            Destroy(myTextObj);
-            originalTextObj.SetActive(true);
+            UIHelper.RestoreUiStatus(uiStatusMap, myTextObj, originalTextObj);
             _isProcessing = false;
         }
 
@@ -1022,10 +1022,15 @@ namespace ChillAIMod
             // 执行通用动作
             GameBridge.CallNativeChangeAnim(animID , Logger);
 
-            // 等待语音播完
-            yield return new WaitForSecondsRealtime(clipDuration);
+            // 等待语音播完，增加0.5秒缓冲，以防止过早判断AI动作结束
+            yield return new WaitForSecondsRealtime(clipDuration + 0.5f);
 
             // 恢复
+            if (_audioSource != null &&_audioSource.isPlaying) {
+                // 即使等待时间到了，语音还在播放，就强制停止进行兜底
+                Logger.LogWarning("等待结束，强制停止语音播放");
+                _audioSource.Stop();
+            }
             GameBridge.RestoreLookAt();
             _isAISpeaking = false;
         }
