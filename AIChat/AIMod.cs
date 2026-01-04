@@ -59,6 +59,9 @@ namespace ChillAIMod
         // --- 新增：API路径修正设置 ---
         private ConfigEntry<bool> _fixApiPathForThinkModeConfig;
 
+        // --- 新增：快捷键配置 ---
+        private ConfigEntry<bool> _reverseEnterBehaviorConfig;
+
         // --- 新增：各配置区域展开状态 ---
         private bool _showLlmSettings = false;
         private bool _showTtsSettings = false;
@@ -171,6 +174,8 @@ namespace ChillAIMod
             // 绑定配置 (默认值使用刚才算出来的动态值)
             _windowWidthConfig = Config.Bind("3. UI", "WindowWidth", responsiveWidth, "窗口宽度");
             _windowHeightConfig = Config.Bind("3. UI", "WindowHeightBase", responsiveHeight, "窗口高度");
+            _reverseEnterBehaviorConfig = Config.Bind("3. UI", "ReverseEnterBehavior", false, 
+                "反转回车键行为（勾选后：回车键换行、Shift+回车键发送；不勾选：回车键发送、Shift+回车键换行）");
 
             // --- 人设配置 ---
             _experimentalMemoryConfig = Config.Bind("4. Persona", "ExperimentalMemory", false, 
@@ -561,6 +566,11 @@ namespace ChillAIMod
                     }
                     GUILayout.EndHorizontal();
                     GUILayout.Space(5);
+                    
+                    // 快捷键配置
+                    _reverseEnterBehaviorConfig.Value = GUILayout.Toggle(_reverseEnterBehaviorConfig.Value, 
+                        "反转回车键行为（勾选后：回车换行，Shift+回车发送）", GUILayout.Height(elementHeight));
+                    GUILayout.Space(5);
                 }
                 
                 GUILayout.EndVertical(); 
@@ -622,7 +632,34 @@ namespace ChillAIMod
             largeInputStyle.wordWrap = true;
             largeInputStyle.alignment = TextAnchor.UpperLeft;
 
-            GUI.skin.textArea.wordWrap = true; 
+            GUI.skin.textArea.wordWrap = true;
+            
+            // 处理快捷键（回车和 Shift+回车）- 必须在 TextArea 之前处理
+            Event keyEvent = Event.current;
+            bool shouldSendMessage = false;
+            
+            if (keyEvent.type == EventType.KeyDown && 
+                keyEvent.keyCode == KeyCode.Return && 
+                !_isProcessing &&
+                !string.IsNullOrEmpty(_playerInput))
+            {
+                // 检测是否按下 Shift 键
+                bool shiftPressed = keyEvent.shift;
+                
+                // 根据配置决定是否应该发送
+                // 默认模式（_reverseEnterBehaviorConfig = false）：Enter 发送，Shift+Enter 换行
+                // 反转模式（_reverseEnterBehaviorConfig = true）：Enter 换行，Shift+Enter 发送
+                shouldSendMessage = _reverseEnterBehaviorConfig.Value ? shiftPressed : !shiftPressed;
+            }
+            
+            // 如果需要发送消息，在渲染 TextArea 之前拦截事件
+            if (shouldSendMessage)
+            {
+                StartCoroutine(AIProcessRoutine(_playerInput));
+                _playerInput = "";
+                keyEvent.Use(); // 消费事件，防止 TextArea 处理
+            }
+            
             _playerInput = GUILayout.TextArea(_playerInput, largeInputStyle, GUILayout.Height(dynamicInputHeight));
 
             GUILayout.Space(5);
