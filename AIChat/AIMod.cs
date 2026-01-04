@@ -39,7 +39,7 @@ namespace ChillAIMod
         private ConfigEntry<bool> _LaunchTTSServiceConfig;
         private ConfigEntry<bool> _quitTTSServiceOnQuitConfig;
         private ConfigEntry<bool> _audioPathCheckConfig;
-        private ConfigEntry<bool> _skipJapaneseCheckConfig;
+        private ConfigEntry<bool> _japaneseCheckConfig;
 
         // --- 新增窗口大小配置 ---
         private ConfigEntry<float> _windowWidthConfig;
@@ -59,7 +59,7 @@ namespace ChillAIMod
         private ConfigEntry<bool> _fixApiPathForThinkModeConfig;
 
         // --- 新增：各配置区域展开状态 ---
-        private bool _showLlmSettings = true;
+        private bool _showLlmSettings = false;
         private bool _showTtsSettings = false;
         private bool _showInterfaceSettings = false;
         private bool _showPersonaSettings = false;
@@ -134,27 +134,29 @@ namespace ChillAIMod
             _audioSource.playOnAwake = false;
 
             // 绑定配置
-            _chatApiUrlConfig = Config.Bind("1. General", "ApiUrl",
+            _chatApiUrlConfig = Config.Bind("1. LLM", "ApiUrl",
                 "https://openrouter.ai/api/v1/chat/completions",
                 "LLM API 地址 (支持 OpenAI/中转站)");
-            _useOllama = Config.Bind("1. General", "Use Ollama Model", false, "Use Ollama Model");
-            _thinkModeConfig = Config.Bind("1. General", "ThinkMode", ThinkMode.Default, "深度思考模式 (Enable/Disable/Default)");
-            _apiKeyConfig = Config.Bind("1. General", "APIKey", "sk-or-v1-PasteYourKeyHere", "OpenRouter API Key");
-            _modelConfig = Config.Bind("1. General", "ModelName", "openai/gpt-3.5-turbo", "LLM Model Name");
+            _useOllama = Config.Bind("1. LLM", "Use Ollama Model", false, "Use Ollama Model");
+            _thinkModeConfig = Config.Bind("1. LLM", "ThinkMode", ThinkMode.Default, "深度思考模式 (Enable/Disable/Default)");
+            _fixApiPathForThinkModeConfig = Config.Bind("1. LLM", "FixApiPathForThinkMode", true,
+                "指定深度思考模式时尝试修正 API 路径");
+            _apiKeyConfig = Config.Bind("1. LLM", "APIKey", "sk-or-v1-PasteYourKeyHere", "OpenRouter API Key");
+            _modelConfig = Config.Bind("1. LLM", "ModelName", "openai/gpt-3.5-turbo", "LLM Model Name");
 
-            _sovitsUrlConfig = Config.Bind("2. Audio", "SoVITS_URL", "http://127.0.0.1:9880", "GPT-SoVITS API URL");
-            _refAudioPathConfig = Config.Bind("2. Audio", "RefAudioPath", @"Voice_MainScenario_27_016.wav", "Ref Audio Path");
-            _TTSServicePathConfig = Config.Bind("2. Audio", "TTS_Service_Path", @"D:\GPT-SoVITS\GPT-SoVITS-v2pro-20250604-nvidia50\run_api.bat", "TTS Service Path");
-            _LaunchTTSServiceConfig = Config.Bind("2. Audio", "LaunchTTSService", true, "是否在游戏启动时自动启动 TTS 服务");
-            _quitTTSServiceOnQuitConfig = Config.Bind("2. Audio", "QuitTTSServiceOnQuit", true, "是否在游戏退出时自动关闭 TTS 服务");
-            _audioPathCheckConfig = Config.Bind("2. Audio", "AudioPathCheck", false, "从 Mod 侧检测音频文件路径");
-            _skipJapaneseCheckConfig = Config.Bind("2. Audio", "SkipJapaneseCheck", false, "跳过日语检测（强制调用 TTS，即使文本不是日语）");
-            _promptTextConfig = Config.Bind("2. Audio", "PromptText", "君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。", "Ref Audio Text");
-            _promptLangConfig = Config.Bind("2. Audio", "PromptLang", "ja", "Ref Lang");
-            _targetLangConfig = Config.Bind("2. Audio", "TargetLang", "ja", "Target Lang");
+            _sovitsUrlConfig = Config.Bind("2. TTS", "SoVITS_URL", "http://127.0.0.1:9880", "GPT-SoVITS API URL");
+            _refAudioPathConfig = Config.Bind("2. TTS", "RefAudioPath", @"Voice_MainScenario_27_016.wav", "Ref Audio Path");
+            _TTSServicePathConfig = Config.Bind("2. TTS", "TTS_Service_Path", @"D:\GPT-SoVITS\GPT-SoVITS-v2pro-20250604-nvidia50\run_api.bat", "TTS Service Path");
+            _LaunchTTSServiceConfig = Config.Bind("2. TTS", "LaunchTTSService", true, "是否在游戏启动时自动启动 TTS 服务");
+            _quitTTSServiceOnQuitConfig = Config.Bind("2. TTS", "QuitTTSServiceOnQuit", true, "是否在游戏退出时自动关闭 TTS 服务");
+            _audioPathCheckConfig = Config.Bind("2. TTS", "AudioPathCheck", false, "从 Mod 侧检测音频文件路径");
+            _japaneseCheckConfig = Config.Bind("2. TTS", "japaneseCheck", false, "检测合成语音文本是否为日文（当 text_lang 为 ja 时可防止发出怪声）");
+            _promptTextConfig = Config.Bind("2. TTS", "PromptText", "君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。", "Ref Audio Text");
+            _promptLangConfig = Config.Bind("2. TTS", "PromptLang", "ja", "Ref Lang");
+            _targetLangConfig = Config.Bind("2. TTS", "TargetLang", "ja", "Target Lang");
 
             // 【新增音量配置】
-            _voiceVolumeConfig = Config.Bind("2. Audio", "VoiceVolume", 1.0f, "语音播放音量 (0.0 - 1.0)");
+            _voiceVolumeConfig = Config.Bind("2. TTS", "VoiceVolume", 1.0f, "语音播放音量 (0.0 - 1.0)");
 
             _personaConfig = Config.Bind("3. Persona", "SystemPrompt", DefaultPersona, "System Prompt");
 
@@ -163,13 +165,9 @@ namespace ChillAIMod
                 "启用实验性分层记忆系统（递归摘要架构，自动压缩对话历史）");
             
             // 【新增：日志记录配置】
-            _logApiRequestBodyConfig = Config.Bind("1. General", "LogApiRequestBody", false,
+            _logApiRequestBodyConfig = Config.Bind("1. LLM", "LogApiRequestBody", false,
                 "在日志中记录 AI API 请求体（用于调试）");
             
-            // 【新增：API路径修正配置】
-            _fixApiPathForThinkModeConfig = Config.Bind("4. Advanced", "FixApiPathForThinkMode", true,
-                "指定深度思考模式时尝试修正 API 路径");
-
             // 新增：窗口大小配置
             // 我们希望窗口宽度是屏幕的 1/3，高度是屏幕的 1/3 (或者你喜欢的比例)
             float responsiveWidth = Screen.width * 0.3f; // 30% 屏幕宽度
@@ -372,7 +370,7 @@ namespace ChillAIMod
             GUILayout.Label(ttsStatus);
 
             // 设置展开按钮 (全宽)
-            string settingsBtnText = _showSettings ? "🔽 收起设置 (Hide Settings)" : "▶️ 展开设置 (Show Settings)";
+            string settingsBtnText = _showSettings ? "🔽 收起设置" : "▶️ 展开设置";
             if (GUILayout.Button(settingsBtnText, GUILayout.Height(elementHeight)))
             {
                 _showSettings = !_showSettings;
@@ -402,7 +400,7 @@ namespace ChillAIMod
                     
                     // 【深度思考模式选项】
                     GUILayout.Space(5);
-                    GUILayout.Label("深度思考模式:");
+                    GUILayout.Label("指定深度思考（在请求体添加 think 键值对，目前仅 Ollama 支持）：");
                     string[] thinkModeOptions = { "不指定", "启用", "禁用" };
                     int currentMode = (int)_thinkModeConfig.Value;
                     int newMode = GUILayout.SelectionGrid(currentMode, thinkModeOptions, 3, GUILayout.Height(elementHeight));
@@ -421,9 +419,9 @@ namespace ChillAIMod
                     _modelConfig.Value = GUILayout.TextField(_modelConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                     
                     GUILayout.Space(5);
-                    _logApiRequestBodyConfig.Value = GUILayout.Toggle(_logApiRequestBodyConfig.Value, "在日志中记录 AI API 请求体", GUILayout.Height(elementHeight));
+                    _logApiRequestBodyConfig.Value = GUILayout.Toggle(_logApiRequestBodyConfig.Value, "在日志中记录 API 请求体", GUILayout.Height(elementHeight));
                     GUILayout.Space(5);
-                    _fixApiPathForThinkModeConfig.Value = GUILayout.Toggle(_fixApiPathForThinkModeConfig.Value, "指定深度思考模式时尝试修正 API 路径", GUILayout.Height(elementHeight));
+                    _fixApiPathForThinkModeConfig.Value = GUILayout.Toggle(_fixApiPathForThinkModeConfig.Value, "指定深度思考模式时尝试改用 Ollama 原生 API 路径", GUILayout.Height(elementHeight));
                     GUILayout.Space(5);
                 }
                 
@@ -444,19 +442,22 @@ namespace ChillAIMod
                     GUILayout.Space(5);
                     GUILayout.Label("TTS 服务 URL：");
                     _sovitsUrlConfig.Value = GUILayout.TextField(_sovitsUrlConfig.Value);
-                    GUILayout.Label("音频文件路径（*.wav）：");
-                    // 路径通常很长，必须加 MinWidth(50f)
-                    _refAudioPathConfig.Value = GUILayout.TextField(_refAudioPathConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
-                    
-                    GUILayout.Label("音频文件台词：");
-                    _promptTextConfig.Value = GUILayout.TextArea(_promptTextConfig.Value, GUILayout.Height(elementHeight * 3), GUILayout.MinWidth(50f));
-                    
+
                     GUILayout.Label("TTS 服务脚本文件路径：");
                     _TTSServicePathConfig.Value = GUILayout.TextField(_TTSServicePathConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
 
                     GUILayout.Space(5);
                     _LaunchTTSServiceConfig.Value = GUILayout.Toggle(_LaunchTTSServiceConfig.Value, "启动时自动运行 TTS 服务", GUILayout.Height(elementHeight));
                     _quitTTSServiceOnQuitConfig.Value = GUILayout.Toggle(_quitTTSServiceOnQuitConfig.Value, "退出时自动关闭 TTS 服务", GUILayout.Height(elementHeight));
+                    GUILayout.Label("音频文件路径（*.wav）：");
+                    // 路径通常很长，必须加 MinWidth(50f)
+                    _refAudioPathConfig.Value = GUILayout.TextField(_refAudioPathConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                    GUILayout.Space(5);
+                    _audioPathCheckConfig.Value = GUILayout.Toggle(_audioPathCheckConfig.Value, "从 Mod 侧检测音频文件路径", GUILayout.Height(elementHeight));
+                    GUILayout.Space(5);
+                    
+                    GUILayout.Label("音频文件台词：");
+                    _promptTextConfig.Value = GUILayout.TextArea(_promptTextConfig.Value, GUILayout.Height(elementHeight * 3), GUILayout.MinWidth(50f));
                     
                     GUILayout.Space(5);
                     GUILayout.Label("音频文件语言 (prompt_lang):");
@@ -466,10 +467,8 @@ namespace ChillAIMod
                     _targetLangConfig.Value = GUILayout.TextField(_targetLangConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                     
                     GUILayout.Space(5);
-                    _skipJapaneseCheckConfig.Value = GUILayout.Toggle(_skipJapaneseCheckConfig.Value, "跳过日语检测（强制调用 TTS）", GUILayout.Height(elementHeight));
+                    _japaneseCheckConfig.Value = GUILayout.Toggle(_japaneseCheckConfig.Value, "检测合成语音文本是否为日文（当 text_lang 为 ja 时可防止发出怪声）", GUILayout.Height(elementHeight));
                     
-                    GUILayout.Space(5);
-                    _audioPathCheckConfig.Value = GUILayout.Toggle(_audioPathCheckConfig.Value, "从 Mod 侧检测音频文件路径", GUILayout.Height(elementHeight));
                     GUILayout.Space(5);
                 }
                 
@@ -568,7 +567,7 @@ namespace ChillAIMod
 
                 // --- 4. 人设配置 Box ---
                 GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
-                string personaBtnText = _showPersonaSettings ? "🔽 人设 (System Prompt)" : "▶️ 人设 (System Prompt)";
+                string personaBtnText = _showPersonaSettings ? "🔽 人设配置" : "▶️ 人设配置";
                 if (GUILayout.Button(personaBtnText, GUILayout.Height(elementHeight)))
                 {
                     _showPersonaSettings = !_showPersonaSettings;
@@ -585,7 +584,9 @@ namespace ChillAIMod
                         Logger.LogInfo("记忆已清空");
                     }
                     GUILayout.EndHorizontal();
-                    _personaScrollPosition = GUILayout.BeginScrollView(_personaScrollPosition, GUILayout.Height(elementHeight * 5));
+                    GUILayout.Space(5);
+                    GUILayout.Label("人设（系统提示词）：");
+                    _personaScrollPosition = GUILayout.BeginScrollView(_personaScrollPosition, GUILayout.Height(elementHeight * 6));
                     _personaConfig.Value = GUILayout.TextArea(_personaConfig.Value, GUILayout.ExpandHeight(true));
                     GUILayout.EndScrollView();
                     GUILayout.Space(5);
@@ -879,8 +880,8 @@ namespace ChillAIMod
                 // 只有当 voiceText 不为空，且看起来像是日语时，才请求 TTS
                 // 简单的日语检测：看是否包含假名 (Hiragana/Katakana)
                 // 这是一个可选的保险措施
-                bool isJapanese = _skipJapaneseCheckConfig.Value ? true : Regex.IsMatch(voiceText, @"[\u3040-\u309F\u30A0-\u30FF]");
-                Logger.LogInfo($"isJapanese: {isJapanese} (skipJapaneseCheck: {_skipJapaneseCheckConfig.Value})");
+                bool isJapanese = _japaneseCheckConfig.Value ? Regex.IsMatch(voiceText, @"[\u3040-\u309F\u30A0-\u30FF]") : true ;
+                Logger.LogInfo($"isJapanese: {isJapanese} (japaneseCheck: {_japaneseCheckConfig.Value})");
 
                 if (!string.IsNullOrEmpty(voiceText) && isJapanese)
                 {
