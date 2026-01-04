@@ -58,6 +58,9 @@ namespace ChillAIMod
         // --- 新增：API路径修正设置 ---
         private ConfigEntry<bool> _fixApiPathForThinkModeConfig;
 
+        // --- 新增：快捷键配置 ---
+        private ConfigEntry<bool> _reverseEnterBehaviorConfig;
+
         // --- 新增：各配置区域展开状态 ---
         private bool _showLlmSettings = false;
         private bool _showTtsSettings = false;
@@ -170,6 +173,8 @@ namespace ChillAIMod
             // 绑定配置 (默认值使用刚才算出来的动态值)
             _windowWidthConfig = Config.Bind("3. UI", "WindowWidth", responsiveWidth, "窗口宽度");
             _windowHeightConfig = Config.Bind("3. UI", "WindowHeightBase", responsiveHeight, "窗口高度");
+            _reverseEnterBehaviorConfig = Config.Bind("3. UI", "ReverseEnterBehavior", false, 
+                "反转回车键行为（勾选后：回车键换行、Shift+回车键发送；不勾选：回车键发送、Shift+回车键换行）");
 
             // --- 人设配置 ---
             _experimentalMemoryConfig = Config.Bind("4. Persona", "ExperimentalMemory", false, 
@@ -560,6 +565,11 @@ namespace ChillAIMod
                     }
                     GUILayout.EndHorizontal();
                     GUILayout.Space(5);
+                    
+                    // 快捷键配置
+                    _reverseEnterBehaviorConfig.Value = GUILayout.Toggle(_reverseEnterBehaviorConfig.Value, 
+                        "反转回车键行为（勾选后：回车换行，Shift+回车发送）", GUILayout.Height(elementHeight));
+                    GUILayout.Space(5);
                 }
                 
                 GUILayout.EndVertical(); 
@@ -623,6 +633,33 @@ namespace ChillAIMod
 
             GUI.skin.textArea.wordWrap = true; 
             _playerInput = GUILayout.TextArea(_playerInput, largeInputStyle, GUILayout.Height(dynamicInputHeight));
+
+            // 处理快捷键（回车和 Shift+回车）
+            Event currentEvent = Event.current;
+            if (currentEvent.type == EventType.KeyDown && currentEvent.keyCode == KeyCode.Return)
+            {
+                // 检测是否按下 Shift 键
+                bool shiftPressed = currentEvent.shift;
+                
+                // 根据配置决定行为
+                bool shouldSend = _reverseEnterBehaviorConfig.Value ? shiftPressed : !shiftPressed;
+                
+                if (shouldSend)
+                {
+                    // 发送消息
+                    if (!string.IsNullOrEmpty(_playerInput) && !_isProcessing)
+                    {
+                        StartCoroutine(AIProcessRoutine(_playerInput));
+                        _playerInput = "";
+                        currentEvent.Use(); // 消费事件，防止添加换行
+                    }
+                }
+                else
+                {
+                    // 换行（Unity TextArea 默认会处理换行，但我们需要确保不会触发其他行为）
+                    // 不消费事件，让 TextArea 自然处理换行
+                }
+            }
 
             GUILayout.Space(5);
             GUI.backgroundColor = _isProcessing ? Color.gray : Color.cyan;
