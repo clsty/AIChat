@@ -1022,10 +1022,15 @@ namespace ChillAIMod
             // 执行通用动作
             GameBridge.CallNativeChangeAnim(animID , Logger);
 
-            // 等待语音播完
-            yield return new WaitForSecondsRealtime(clipDuration);
+            // 等待语音播完，增加0.5秒缓冲，以防止过早判断AI动作结束
+            yield return new WaitForSecondsRealtime(clipDuration + 0.5f);
 
             // 恢复
+            if (_audioSource != null &&_audioSource.isPlaying) {
+                // 即使等待时间到了，语音还在播放，就强制停止进行兜底
+                Logger.LogWarning("等待结束，强制停止语音播放");
+                _audioSource.Stop();
+            }
             GameBridge.RestoreLookAt();
             _isAISpeaking = false;
         }
