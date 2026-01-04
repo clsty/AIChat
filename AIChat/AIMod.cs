@@ -633,10 +633,9 @@ namespace ChillAIMod
 
             GUI.skin.textArea.wordWrap = true;
             
-            // 处理快捷键（回车和 Shift+回车）
+            // 处理快捷键（回车和 Shift+回车）- 必须在 TextArea 之前处理
             Event keyEvent = Event.current;
             bool shouldSendMessage = false;
-            string messageToSend = "";
             
             if (keyEvent.type == EventType.KeyDown && 
                 keyEvent.keyCode == KeyCode.Return && 
@@ -650,23 +649,17 @@ namespace ChillAIMod
                 // 默认模式（_reverseEnterBehaviorConfig = false）：Enter 发送，Shift+Enter 换行
                 // 反转模式（_reverseEnterBehaviorConfig = true）：Enter 换行，Shift+Enter 发送
                 shouldSendMessage = _reverseEnterBehaviorConfig.Value ? shiftPressed : !shiftPressed;
-                
-                if (shouldSendMessage)
-                {
-                    // 保存要发送的消息
-                    messageToSend = _playerInput;
-                    keyEvent.Use(); // 消费事件，防止 TextArea 添加换行
-                }
+            }
+            
+            // 如果需要发送消息，在渲染 TextArea 之前拦截事件
+            if (shouldSendMessage)
+            {
+                StartCoroutine(AIProcessRoutine(_playerInput));
+                _playerInput = "";
+                keyEvent.Use(); // 消费事件，防止 TextArea 处理
             }
             
             _playerInput = GUILayout.TextArea(_playerInput, largeInputStyle, GUILayout.Height(dynamicInputHeight));
-            
-            // 在 TextArea 渲染后清空并发送消息
-            if (shouldSendMessage && !string.IsNullOrEmpty(messageToSend))
-            {
-                _playerInput = ""; // 清空输入框
-                StartCoroutine(AIProcessRoutine(messageToSend));
-            }
 
             GUILayout.Space(5);
             GUI.backgroundColor = _isProcessing ? Color.gray : Color.cyan;
