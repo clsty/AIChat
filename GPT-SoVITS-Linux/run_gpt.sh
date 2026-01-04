@@ -14,6 +14,6 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CUDNN_PATH
 cd "$WORKDIR"
 
 # 2. 启动 Python API
-nohup /home/joe/miniconda3/envs/GPTSoVits/bin/python api_v2.py -a 127.0.0.1 -p 9880 > "$LOG_FILE" 2>&1 &
+nohup /home/joe/miniconda3/envs/GPTSoVits/bin/python api_v2_ex.py -a 127.0.0.1 -p 9880 > "$LOG_FILE" 2>&1 &
 API_PID=$!
 echo "API Started. PID: $API_PID" >> "$LOG_FILE"
