@@ -634,16 +634,16 @@ namespace ChillAIMod
             GUI.skin.textArea.wordWrap = true;
             
             // 处理快捷键（回车和 Shift+回车）- 必须在 TextArea 之前处理
-            Event currentEvent = Event.current;
+            Event keyEvent = Event.current;
             bool shouldSendMessage = false;
             
-            if (currentEvent.type == EventType.KeyDown && 
-                currentEvent.keyCode == KeyCode.Return && 
+            if (keyEvent.type == EventType.KeyDown && 
+                keyEvent.keyCode == KeyCode.Return && 
                 !_isProcessing &&
                 !string.IsNullOrEmpty(_playerInput))
             {
                 // 检测是否按下 Shift 键
-                bool shiftPressed = currentEvent.shift;
+                bool shiftPressed = keyEvent.shift;
                 
                 // 根据配置决定是否应该发送
                 // 默认模式（_reverseEnterBehaviorConfig = false）：Enter 发送，Shift+Enter 换行
@@ -656,7 +656,7 @@ namespace ChillAIMod
             {
                 StartCoroutine(AIProcessRoutine(_playerInput));
                 _playerInput = "";
-                currentEvent.Use(); // 消费事件，防止 TextArea 处理
+                keyEvent.Use(); // 消费事件，防止 TextArea 处理
             }
             
             _playerInput = GUILayout.TextArea(_playerInput, largeInputStyle, GUILayout.Height(dynamicInputHeight));
