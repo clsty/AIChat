@@ -133,40 +133,36 @@ namespace ChillAIMod
             _audioSource = this.gameObject.AddComponent<AudioSource>();
             _audioSource.playOnAwake = false;
 
-            // 绑定配置
-            _chatApiUrlConfig = Config.Bind("1. LLM", "ApiUrl",
-                "https://openrouter.ai/api/v1/chat/completions",
-                "LLM API 地址 (支持 OpenAI/中转站)");
-            _useOllama = Config.Bind("1. LLM", "Use Ollama Model", false, "Use Ollama Model");
-            _thinkModeConfig = Config.Bind("1. LLM", "ThinkMode", ThinkMode.Default, "深度思考模式 (Enable/Disable/Default)");
-            _fixApiPathForThinkModeConfig = Config.Bind("1. LLM", "FixApiPathForThinkMode", true,
-                "指定深度思考模式时尝试修正 API 路径");
-            _apiKeyConfig = Config.Bind("1. LLM", "APIKey", "sk-or-v1-PasteYourKeyHere", "OpenRouter API Key");
-            _modelConfig = Config.Bind("1. LLM", "ModelName", "openai/gpt-3.5-turbo", "LLM Model Name");
-
-            _sovitsUrlConfig = Config.Bind("2. TTS", "SoVITS_URL", "http://127.0.0.1:9880", "GPT-SoVITS API URL");
-            _refAudioPathConfig = Config.Bind("2. TTS", "RefAudioPath", @"Voice_MainScenario_27_016.wav", "Ref Audio Path");
-            _TTSServicePathConfig = Config.Bind("2. TTS", "TTS_Service_Path", @"D:\GPT-SoVITS\GPT-SoVITS-v2pro-20250604-nvidia50\run_api.bat", "TTS Service Path");
-            _LaunchTTSServiceConfig = Config.Bind("2. TTS", "LaunchTTSService", true, "是否在游戏启动时自动启动 TTS 服务");
-            _quitTTSServiceOnQuitConfig = Config.Bind("2. TTS", "QuitTTSServiceOnQuit", true, "是否在游戏退出时自动关闭 TTS 服务");
-            _audioPathCheckConfig = Config.Bind("2. TTS", "AudioPathCheck", false, "从 Mod 侧检测音频文件路径");
-            _japaneseCheckConfig = Config.Bind("2. TTS", "japaneseCheck", false, "检测合成语音文本是否为日文（当 text_lang 为 ja 时可防止发出怪声）");
-            _promptTextConfig = Config.Bind("2. TTS", "PromptText", "君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。", "Ref Audio Text");
-            _promptLangConfig = Config.Bind("2. TTS", "PromptLang", "ja", "Ref Lang");
-            _targetLangConfig = Config.Bind("2. TTS", "TargetLang", "ja", "Target Lang");
-
-            // 【新增音量配置】
-            _voiceVolumeConfig = Config.Bind("2. TTS", "VoiceVolume", 1.0f, "语音播放音量 (0.0 - 1.0)");
-
-            _personaConfig = Config.Bind("3. Persona", "SystemPrompt", DefaultPersona, "System Prompt");
-
-            // 【新增：实验性分层记忆系统配置】
-            _experimentalMemoryConfig = Config.Bind("3. Persona", "ExperimentalMemory", false, 
-                "启用实验性分层记忆系统（递归摘要架构，自动压缩对话历史）");
+            // =================== 【配置绑定】 ===================
+            // 按 UI 显示顺序组织，确保配置文件中的顺序与 UI 一致
             
-            // 【新增：日志记录配置】
+            // --- 1. LLM 配置 ---
+            _useOllama = Config.Bind("1. LLM", "Use_Ollama_API", false, "使用 Ollama API");
+            _thinkModeConfig = Config.Bind("1. LLM", "ThinkMode", ThinkMode.Default, "深度思考模式 (Default/Enable/Disable)");
+            _chatApiUrlConfig = Config.Bind("1. LLM", "API_URL",
+                "https://openrouter.ai/api/v1/chat/completions",
+                "API URL");
+            _apiKeyConfig = Config.Bind("1. LLM", "API_Key", "sk-or-v1-PasteYourKeyHere", "API Key");
+            _modelConfig = Config.Bind("1. LLM", "ModelName", "openai/gpt-3.5-turbo", "模型名称");
             _logApiRequestBodyConfig = Config.Bind("1. LLM", "LogApiRequestBody", false,
-                "在日志中记录 AI API 请求体（用于调试）");
+                "在日志中记录 API 请求体");
+            _fixApiPathForThinkModeConfig = Config.Bind("1. LLM", "FixApiPathForThinkMode", true,
+                "指定深度思考模式时尝试改用 Ollama 原生 API 路径");
+
+            // --- 2. TTS 配置 ---
+            _sovitsUrlConfig = Config.Bind("2. TTS", "TTS_Service_URL", "http://127.0.0.1:9880", "TTS 服务 URL");
+            _TTSServicePathConfig = Config.Bind("2. TTS", "TTS_Service_Script_Path", @"D:\GPT-SoVITS\GPT-SoVITS-v2pro-20250604-nvidia50\run_api.bat", "TTS 服务脚本文件路径");
+            _LaunchTTSServiceConfig = Config.Bind("2. TTS", "LaunchTTSService", true, "启动时自动运行 TTS 服务");
+            _quitTTSServiceOnQuitConfig = Config.Bind("2. TTS", "QuitTTSServiceOnQuit", true, "退出时自动关闭 TTS 服务");
+            _refAudioPathConfig = Config.Bind("2. TTS", "Audio_File_Path", @"Voice_MainScenario_27_016.wav", "音频文件路径（*.wav）");
+            _audioPathCheckConfig = Config.Bind("2. TTS", "AudioPathCheck", false, "从 Mod 侧检测音频文件路径");
+            _promptTextConfig = Config.Bind("2. TTS", "Audio_File_Text", "君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。", "音频文件台词");
+            _promptLangConfig = Config.Bind("2. TTS", "PromptLang", "ja", "音频文件语言 (prompt_lang)");
+            _targetLangConfig = Config.Bind("2. TTS", "TargetLang", "ja", "合成语音语言 (text_lang)");
+            _japaneseCheckConfig = Config.Bind("2. TTS", "JapaneseCheck", false, "检测合成语音文本是否为日文（当 text_lang 为 ja 时可防止发出怪声）");
+
+            // --- 3. 界面配置 ---
+            _voiceVolumeConfig = Config.Bind("3. UI", "VoiceVolume", 1.0f, "语音音量 (0.0 - 1.0)");
             
             // 新增：窗口大小配置
             // 我们希望窗口宽度是屏幕的 1/3，高度是屏幕的 1/3 (或者你喜欢的比例)
@@ -174,8 +170,15 @@ namespace ChillAIMod
             float responsiveHeight = Screen.height * 0.45f; // 45% 屏幕高度
 
             // 绑定配置 (默认值使用刚才算出来的动态值)
-            _windowWidthConfig = Config.Bind("4. UI", "WindowWidth", responsiveWidth, "控制台窗口宽度");
-            _windowHeightConfig = Config.Bind("4. UI", "WindowHeightBase", responsiveHeight, "控制台窗口的基础高度");
+            _windowWidthConfig = Config.Bind("3. UI", "WindowWidth", responsiveWidth, "窗口宽度");
+            _windowHeightConfig = Config.Bind("3. UI", "WindowHeightBase", responsiveHeight, "窗口高度");
+
+            // --- 4. 人设 ---
+            _experimentalMemoryConfig = Config.Bind("4. Persona", "ExperimentalMemory", false, 
+                "启用记忆");
+            _personaConfig = Config.Bind("4. Persona", "SystemPrompt", DefaultPersona, "System Prompt");
+
+            // ===========================================
 
             // ================= 【修改点 2: 左上角对齐】 =================
             // 以前是 Screen.width / 2 (居中)，现在改为左上角 + 边距
