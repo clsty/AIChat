@@ -4,7 +4,7 @@
 
 ## 特色
 - 使用任意兼容的聊天 API（如 OpenRouter/OpenAI/Ollama）生成对话文本。
-- 支持使用本地部署的 GPT-SoVITS/TTS WebAPIv2 生成语音（不上传语音到第三方），无需将 TTS Key 传到云端，更安全且延迟低。
+- 支持使用本地部署的 GPT-SoVITS WebAPIv2 生成语音（不上传语音到第三方），无需将 TTS Key 传到云端，更安全且延迟低。
 - UI 内可调节音量、窗口尺寸、保存配置，支持拖拽调整大小与精确数值输入。
 - 要求 AI 输出严格格式：`[Emotion] ||| JAPANESE TEXT ||| CHINESE TRANSLATION`，插件根据情感切换动作并播放日语语音，显示中文字幕。若 AI 未按格式返回，只显示字幕并以思考动作代替语音（避免错误语句被 TTS 读出）。
 
@@ -26,12 +26,12 @@
    - 请务必确保上一步已生成目录结构。否则，说明 BepInEx 前置未正确加载（在解决此问题之前，继续下一步是无意义的）。
    - 将 `AIChat.dll` 放入 `BepInEx` 下的 `plugins` 目录中。
    - 打开游戏，按 F9 键或 F10 键调出 Mod 的界面。
-   - 配置好 API URL 与 API Key 以及 Model Name 并保存，此时就可以在“与聪音对话”的文本框里进行对话了（仅文字；下一节将配置语音）。
+   - 在 LLM 配置中，填写 API URL 与 API Key 以及模型名称并保存，此时就可以在“与聪音对话”的文本框里进行对话了（仅文字；下一节将配置语音）。
      - API URL 示例：
        - OpenRouter：`https://openrouter.ai/api/v1/chat/completions`
        - Ollama：`http://127.0.0.1:11434/v1/chat/completions`
        - Gemini：`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`
-   - 注意：聊天内容会发送到你配置的聊天 API（如 OpenRouter/OpenAI）；请留心 API Key 与隐私策略。
+   - 注意：聊天内容会发送到你配置的 API，请留心 API Key 与隐私策略。
 
 ### 语音配置（可选）
 本项目依赖 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) 的 WebAPI v2 来生成语音，
@@ -65,14 +65,14 @@
    - 将前面下载过的 Mod 压缩包中的 `api_v2_ex.py` 和 `Voice_MainScenario_27_016.wav` 放到 `GPT-SoVITS` 的根目录下（对于 Windows 用户是整合包解压后的根目录，对于 Linux 用户是 Git 仓库的根目录）。
 
 3. 测试 TTS 服务
-   - 注：以下假设 WebAPIv2 的 TTS 服务运行于 `http://127.0.0.1:9880`。这是默认情况，若你做过改动，则在以下步骤中也要相应变更。
+   - 注：以下假设 WebAPI v2 的 TTS 服务运行于 `http://127.0.0.1:9880`。这是默认情况，若你做过改动，则在以下步骤中也要相应变更。
    - 在浏览器打开[测试链接](http://127.0.0.1:9880/tts?text=%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF%E3%80%81%E3%81%8A%E5%85%83%E6%B0%97%E3%81%A7%E3%81%99%E3%81%8B%EF%BC%9F%E4%BB%8A%E6%97%A5%E3%82%82%E4%B8%80%E7%B7%92%E3%81%AB%E9%A0%91%E5%BC%B5%E3%82%8A%E3%81%BE%E3%81%97%E3%82%87%E3%81%86%EF%BC%81&text_lang=ja&ref_audio_path=Voice_MainScenario_27_016.wav&prompt_text=%E5%90%9B%E3%81%8C%E9%9B%86%E4%B8%AD%E3%81%97%E3%81%9F%E6%99%82%E3%81%AE%E3%82%B7%E3%83%BC%E3%82%BF%E6%B3%A2%E3%82%92%E6%A4%9C%E5%87%BA%E3%81%97%E3%81%A6%E3%80%81%E3%83%AA%E3%83%B3%E3%82%AF%E3%82%92%E3%81%A4%E3%81%AA%E3%81%8E%E7%9B%B4%E3%81%9B%E3%81%B0%E5%85%83%E9%80%9A%E3%82%8A%E3%81%AB%E3%81%AA%E3%82%8B%E3%81%AF%E3%81%9A%E3%80%82&prompt_lang=ja&speed_factor=1.0)
      > 上面浏览器打开的是经过转义的链接，下面是测试链接的实际内容：
      > ```url
      > http://127.0.0.1:9880/tts?text=こんにちは、お元気ですか？今日も一緒に頑張りましょう！&text_lang=ja&ref_audio_path=Voice_MainScenario_27_016.wav&prompt_text=君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。&prompt_lang=ja&speed_factor=1.0
      > ```
-     > 它的基本作用是让这个 tts 服务模仿 `ref_audio_path` 所指定的音频文件（台词为 `prompt_text` 的值）来合成 `text` 的语音音频。
-     > 实际上，这里测试使用的是 GTP-SoVITS 的 WebAPI 的 GET 用法，详见 [`api_v2.py`](https://github.com/RVC-Boss/GPT-SoVITS/blob/main/api_v2.py) 的注释。
+     > 它的基本作用是让这个 TTS 服务模仿 `ref_audio_path` 所指定的音频文件（台词为 `prompt_text` 的值）来合成 `text` 的语音音频。
+     > 实际上，这里测试使用的是 WebAPI v2 的 GET 用法，详见 [`api_v2.py`](https://github.com/RVC-Boss/GPT-SoVITS/blob/main/api_v2.py) 的注释。
 
      稍等片刻，将会下载一个大约 300 KiB 大小的 `tts.wav` 文件，播放它应当能清晰地听到三句与游戏角色相似的日语语音，时长约 5 秒。
      > 或者，直接在命令行用 `ffplay`（由 FFmpeg 提供）：
@@ -83,11 +83,12 @@
 3. 在 Mod 中配置
    - 请务必确保上一步语音测试成功。否则，说明 TTS 服务未正常运行（在解决此问题之前，继续下一步是无意义的）。
    - 在游戏按 F9 键调出 Mod 的界面，聊天以进行测试。
-   - 下面的参数默认都已填好，**一般不要改动**，如下：
-     - `音频路径(.wav)` ：`Voice_MainScenario_27_016.wav`
+   - 对于 TTS 配置，下面的参数默认都已填好，**一般不要改动**，如下：
+     - `TTS 服务 URL`：`http://127.0.0.1:9880`
+     - `音频文件路径`：`Voice_MainScenario_27_016.wav`
      - `从 Mod 侧检测音频文件路径`：不勾选
-     - `音频台词`（即 wav 音频文件的原文）：`君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。`
-     - `TTS Service Url`：`http://127.0.0.1:9880`
+     - `音频文件台词`（即 wav 音频文件的原文）：`君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。`
+     - `音频文件语言`：`ja`
 
 4. 配置语音识别（可选）
    - 前面我们已经将 `api_v2_ex.py` 复制到 GPT-SoVITS 根目录下，但为了稳定起见，之前启动的是 `api_v2.py`，它是不支持语音识别的。
@@ -98,37 +99,13 @@
 ## 使用与设置
 
 ### 游戏内界面的使用
-- 打开/关闭控制台：按 F9 或 F10（切换）。
+- 打开/关闭控制台（Mod 界面）：按 F9 或 F10（切换）。
 - 拖拽右下角调整窗口大小；放开鼠标会把新尺寸保存到配置。
-- 对话文本会自动插入换行以避免超出屏幕。
+- 点击“保存所有配置”，会把设置项保存到 BepInEx 的配置文件中。
+  - 位置：在游戏目录下的 `BepInEx/config/com.username.chillaimod.cfg`
+  - 关于各配置项的说明，参见其中的注释。
 
-### 配置项与配置文件
-游戏内 Mod 界面中的设置将保存到 BepInEx 的配置文件（即游戏目录下的 `BepInEx/config/com.username.chillaimod.cfg` 中）。
-
-以下是部分配置项的说明。
-
-1. General
-  - ApiUrl — 聊天 API 地址（例如 `https://openrouter.ai/api/v1/chat/completions`, `http://127.0.0.1:11434/v1/chat/completions` for ollama, `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` for gemini）
-  - APIKey — 聊天 API Key
-  - ModelName — 聊天模型（例如 `openai/gpt-3.5-turbo`）
-2. Audio
-  - SoVITS_URL — 本地 TTS 服务地址（如 `http://127.0.0.1:9880`）
-  - RefAudioPath — 参考音频路径（.wav）
-  - TTS_Service_Path — 本地 TTS 服务路径。在游戏开启时自动启动。
-  - PromptText — 参考音频对应的文本（用于声线迁移）
-  - PromptLang / TargetLang — 参考文本与目标语言标识
-  - VoiceVolume — 语音播放音量（0.0 - 1.0）
-3. Persona
-  - SystemPrompt — 给 LLM 的系统人设（默认内置一段示例人设）
-4. UI
-  - WindowWidth / WindowHeightBase — 控制台窗口宽度与基础高度
-
-### 设置面板功能
-- 音量滑块与精确输入（文本框 + 应用按钮）
-- 窗口宽高滑块/文本输入 + 应用
-- 保存所有配置按钮（写入 BepInEx 的配置文件）
-
-### AI 输出格式与 Persona
+### AI 输出格式与系统提示词
 为了正确解析 AI 返回的结果，其输出的格式必须严格遵守以下三段格式（中间用 `|||` 分隔）
 ```plain
 [Emotion] ||| JAPANESE TEXT ||| CHINESE TRANSLATION
@@ -140,10 +117,11 @@
 [Wave] ||| やあ、準備はいい？ ||| 嗨，准备好了吗？
 ```
 
-而为了达到上面的要求，就需要合适的 Persona（或者说 SystemPrompt）。插件内置了一个示例 SystemPrompt（见 [AIChat/AIMod.cs 的 DefaultPersona](https://github.com/qzrs777/AIChat/blob/57f8352377798334b44c5c3a3c8298ae2381b0dc/AIChat/AIMod.cs#L85-L110)），示范如何强制 AI 始终以日语语音输出，并给出格式约束（请在设置中编辑以适配你的角色）。
+而为了达到上面的要求，就需要合适的人设（系统提示词）。
+插件默认的系统提示词（见 [AIChat/AIMod.cs 的 DefaultPersona](https://github.com/qzrs777/AIChat/blob/57f8352377798334b44c5c3a3c8298ae2381b0dc/AIChat/AIMod.cs#L85-L110)），示范了如何强制 AI 始终以日语语音输出，并给出格式约束。你可以基于此编辑，以适配你的角色。
 
-> 具体的流程是：
-> - 用户在控制台输入文本后点击`发送`，将文本和 SystemPrompt 发送至 AI 的 API，再处理返回的响应。
+> Mod 具体的工作流程是：
+> - 用户在控制台输入文本后点击`发送`，将系统提示词和用户文本发送至 LLM 的 API，再处理返回的响应。
 > - 如果响应符合 `[Emotion] ||| 日语 ||| 中文` 格式：
 >   - 从 `[Emotion]` 提取情感标签。
 >   - 用日语部分请求 TTS 服务，得到合成的语音。
@@ -165,7 +143,7 @@
 - 这里以中文 `zh` 为例，其他语言同理。
 
 步骤：
-- 在 Mod 的界面里将 Persona 调整一下，以适配中文输出。例如：
+- 在 Mod 的界面里将系统提示词调整一下，以适配中文输出。例如：
   ```plain
   You are Satone（聪音）, a girl who loves writing novels and is full of imagination.
   
@@ -194,7 +172,7 @@
   Example 2: [Think] ||| 嗯……这里的描写好难写啊…… ||| 嗯……这里的描写好难写啊……
   Example 3: [Drink] ||| 呼……要不休息一下？虽然隔着屏幕，乾杯。 ||| 呼……要不休息一下？虽然隔着屏幕，乾杯。
   ```
-- 展开高级设置，将 `合成语音语言（text_lang）` 改为 `zh`，并勾选`跳过日语检测（强制调用 TTS）`。
+- 展开高级设置，将 `合成语音语言（text_lang）` 改为 `zh`，并取消勾选`检测合成语音文本是否为日文`。
 - 保存配置。
 
 ## 构建
@@ -211,21 +189,24 @@
     ```
 - 在线构建：本项目由 GitHub Action 每日自动构建（也可由维护者手动触发），见 [Release Preview Build](https://github.com/qzrs777/AIChat/releases/tag/preview)。[![Build Status](https://github.com/qzrs777/AIChat/actions/workflows/build.yml/badge.svg)](https://github.com/qzrs777/AIChat/actions/workflows/build.yml)
 
-## 调试与常见问题
-**Mod 日志**为游戏目录下的 `BepInEx` 中的 `LogOutput.log`。
-其中有 TTS 错误和响应文本，尤其注意请求发送的 JSON 数据（插件在请求体中会传入 `text`、`text_lang`、`ref_audio_path`、`prompt_text`、`prompt_lang`）。
+## 问题排查
+前提说明：
+- **Mod 日志**为游戏目录下的 `BepInEx` 中的 `LogOutput.log`。其中有 TTS 错误和响应文本，尤其注意请求发送的 JSON 数据（插件在请求体中会传入 `text`、`text_lang`、`ref_audio_path`、`prompt_text`、`prompt_lang`）。
+- 重置配置的方法：将配置文件 `com.username.chillaimod.cfg` 删除，重启游戏，此配置文件将以默认值重新生成。
 
+问题列举：
 - TTS 报错 / TTS 返回空音频 / 没有声音
   - 确认是否能通过`测试 TTS 服务`这一步。
     - 若不能，说明 TTS 服务未正确配置（与本 Mod 无关），可进一步确认是否已下载并正确配置本地 VITS 模型（EPIT、model 名称等）。
-    - 若能，可能是 Mod 中的配置出错。请检查 BepInEx 配置项中 `SoVITS_URL` 是否正确（默认值 `http://127.0.0.1:9880`，测试方法请参考`测试 TTS 服务`的说明）。
+    - 若能，可能是 Mod 中的配置出错。
+      - 请检查 BepInEx 配置项中 `TTS_Service_URL` 是否正确（默认值 `http://127.0.0.1:9880`，测试方法请参考`测试 TTS 服务`的说明）。
   - 检查 GPT-SoVITS 日志（控制台界面）。
   - 检查 Mod 日志。
 - Mod 没有生效 / 找不到 plugins 文件夹
   - 运行一次游戏，以生成必要的目录结构；之后再将 `AIChat.dll` 放入 `BepInEx/plugins` 下。
 - AI 返回中文，但被 TTS 读出发音异常
   - 检查 Mod 日志。
-  - 若 AI 返回的内容不符合格式要求，请确保使用合适的 Persona，或尝试更换 AI 模型。
+  - 若 AI 返回的内容不符合格式要求，请确保使用合适的系统提示词，或尝试更换 AI 模型。
   - 注：插件默认会检测语音文本是否含日文假名，若无假名则不会调用 TTS，而仅显示字幕文本。
 
 ## 致谢与许可

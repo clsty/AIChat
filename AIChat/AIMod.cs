@@ -17,11 +17,14 @@ using AIChat.Unity;
 
 namespace ChillAIMod
 {
+    public enum ThinkMode { Default, Enable, Disable }
+
     [BepInPlugin("com.username.chillaimod", "Chill AI Mod", "1.1.0")]
     public class AIMod : BaseUnityPlugin
     {
         // ================= 【配置项】 =================
-        private ConfigEntry<bool> _useLocalOllama;
+        private ConfigEntry<bool> _useOllama;
+        private ConfigEntry<ThinkMode> _thinkModeConfig;
         private ConfigEntry<string> _apiKeyConfig;
         private ConfigEntry<string> _modelConfig;
         private ConfigEntry<string> _sovitsUrlConfig;
@@ -36,7 +39,7 @@ namespace ChillAIMod
         private ConfigEntry<bool> _LaunchTTSServiceConfig;
         private ConfigEntry<bool> _quitTTSServiceOnQuitConfig;
         private ConfigEntry<bool> _audioPathCheckConfig;
-        private ConfigEntry<bool> _skipJapaneseCheckConfig;
+        private ConfigEntry<bool> _japaneseCheckConfig;
 
         // --- 新增窗口大小配置 ---
         private ConfigEntry<float> _windowWidthConfig;
@@ -48,9 +51,18 @@ namespace ChillAIMod
         // --- 新增：实验性分层记忆系统 ---
         private ConfigEntry<bool> _experimentalMemoryConfig;
         private HierarchicalMemory _hierarchicalMemory;
+        
+        // --- 新增：日志记录设置 ---
+        private ConfigEntry<bool> _logApiRequestBodyConfig;
+        
+        // --- 新增：API路径修正设置 ---
+        private ConfigEntry<bool> _fixApiPathForThinkModeConfig;
 
-        // --- 新增：高级设置展开状态 ---
-        private bool _showAdvancedSettings = false;
+        // --- 新增：各配置区域展开状态 ---
+        private bool _showLlmSettings = false;
+        private bool _showTtsSettings = false;
+        private bool _showInterfaceSettings = false;
+        private bool _showPersonaSettings = false;
 
         // --- 录音相关变量 ---
         private AudioClip _recordingClip;
@@ -121,42 +133,50 @@ namespace ChillAIMod
             _audioSource = this.gameObject.AddComponent<AudioSource>();
             _audioSource.playOnAwake = false;
 
-            // 绑定配置
-            _chatApiUrlConfig = Config.Bind("1. General", "ApiUrl",
+            // =================== 【配置绑定】 ===================
+            // 按 UI 显示顺序组织，确保配置文件中的顺序与 UI 一致
+            
+            // --- LLM 配置 ---
+            _useOllama = Config.Bind("1. LLM", "Use_Ollama_API", false, "使用 Ollama API");
+            _thinkModeConfig = Config.Bind("1. LLM", "ThinkMode", ThinkMode.Default, "深度思考模式 (Default/Enable/Disable)");
+            _chatApiUrlConfig = Config.Bind("1. LLM", "API_URL",
                 "https://openrouter.ai/api/v1/chat/completions",
-                "LLM API 地址 (支持 OpenAI/中转站)");
-            _useLocalOllama = Config.Bind("1. General", "Use Loacal Ollama Model", false, "Use Loacal Ollama Model");
-            _apiKeyConfig = Config.Bind("1. General", "APIKey", "sk-or-v1-PasteYourKeyHere", "OpenRouter API Key");
-            _modelConfig = Config.Bind("1. General", "ModelName", "openai/gpt-3.5-turbo", "LLM Model Name");
+                "API URL");
+            _apiKeyConfig = Config.Bind("1. LLM", "API_Key", "sk-or-v1-PasteYourKeyHere", "API Key");
+            _modelConfig = Config.Bind("1. LLM", "ModelName", "openai/gpt-3.5-turbo", "模型名称");
+            _logApiRequestBodyConfig = Config.Bind("1. LLM", "LogApiRequestBody", false,
+                "在日志中记录 API 请求体");
+            _fixApiPathForThinkModeConfig = Config.Bind("1. LLM", "FixApiPathForThinkMode", true,
+                "指定深度思考模式时尝试改用 Ollama 原生 API 路径");
 
-            _sovitsUrlConfig = Config.Bind("2. Audio", "SoVITS_URL", "http://127.0.0.1:9880", "GPT-SoVITS API URL");
-            _refAudioPathConfig = Config.Bind("2. Audio", "RefAudioPath", @"Voice_MainScenario_27_016.wav", "Ref Audio Path");
-            _TTSServicePathConfig = Config.Bind("2. Audio", "TTS_Service_Path", @"D:\GPT-SoVITS\GPT-SoVITS-v2pro-20250604-nvidia50\run_api.bat", "TTS Service Path");
-            _LaunchTTSServiceConfig = Config.Bind("2. Audio", "LaunchTTSService", true, "是否在游戏启动时自动启动 TTS 服务");
-            _quitTTSServiceOnQuitConfig = Config.Bind("2. Audio", "QuitTTSServiceOnQuit", true, "是否在游戏退出时自动关闭 TTS 服务");
-            _audioPathCheckConfig = Config.Bind("2. Audio", "AudioPathCheck", false, "从 Mod 侧检测音频文件路径");
-            _skipJapaneseCheckConfig = Config.Bind("2. Audio", "SkipJapaneseCheck", false, "跳过日语检测（强制调用 TTS，即使文本不是日语）");
-            _promptTextConfig = Config.Bind("2. Audio", "PromptText", "君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。", "Ref Audio Text");
-            _promptLangConfig = Config.Bind("2. Audio", "PromptLang", "ja", "Ref Lang");
-            _targetLangConfig = Config.Bind("2. Audio", "TargetLang", "ja", "Target Lang");
+            // --- TTS 配置 ---
+            _sovitsUrlConfig = Config.Bind("2. TTS", "TTS_Service_URL", "http://127.0.0.1:9880", "TTS 服务 URL");
+            _TTSServicePathConfig = Config.Bind("2. TTS", "TTS_Service_Script_Path", @"D:\GPT-SoVITS\GPT-SoVITS-v2pro-20250604-nvidia50\run_api.bat", "TTS 服务脚本文件路径");
+            _LaunchTTSServiceConfig = Config.Bind("2. TTS", "LaunchTTSService", true, "启动时自动运行 TTS 服务");
+            _quitTTSServiceOnQuitConfig = Config.Bind("2. TTS", "QuitTTSServiceOnQuit", true, "退出时自动关闭 TTS 服务");
+            _refAudioPathConfig = Config.Bind("2. TTS", "Audio_File_Path", @"Voice_MainScenario_27_016.wav", "音频文件路径（*.wav）");
+            _audioPathCheckConfig = Config.Bind("2. TTS", "AudioPathCheck", false, "从 Mod 侧检测音频文件路径");
+            _promptTextConfig = Config.Bind("2. TTS", "Audio_File_Text", "君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。", "音频文件台词");
+            _promptLangConfig = Config.Bind("2. TTS", "PromptLang", "ja", "音频文件语言 (prompt_lang)");
+            _targetLangConfig = Config.Bind("2. TTS", "TargetLang", "ja", "合成语音语言 (text_lang)");
+            _japaneseCheckConfig = Config.Bind("2. TTS", "JapaneseCheck", true, "检测合成语音文本是否为日文（当合成语音语言为 ja 时可防止发出怪声）");
+            _voiceVolumeConfig = Config.Bind("2. TTS", "VoiceVolume", 1.0f, "语音音量 (0.0 - 1.0)");
 
-            // 【新增音量配置】
-            _voiceVolumeConfig = Config.Bind("2. Audio", "VoiceVolume", 1.0f, "语音播放音量 (0.0 - 1.0)");
-
-            _personaConfig = Config.Bind("3. Persona", "SystemPrompt", DefaultPersona, "System Prompt");
-
-            // 【新增：实验性分层记忆系统配置】
-            _experimentalMemoryConfig = Config.Bind("3. Persona", "ExperimentalMemory", false, 
-                "启用实验性分层记忆系统（递归摘要架构，自动压缩对话历史）");
-
-            // 新增：窗口大小配置
+            // --- 界面配置 ---
             // 我们希望窗口宽度是屏幕的 1/3，高度是屏幕的 1/3 (或者你喜欢的比例)
             float responsiveWidth = Screen.width * 0.3f; // 30% 屏幕宽度
             float responsiveHeight = Screen.height * 0.45f; // 45% 屏幕高度
 
             // 绑定配置 (默认值使用刚才算出来的动态值)
-            _windowWidthConfig = Config.Bind("4. UI", "WindowWidth", responsiveWidth, "控制台窗口宽度");
-            _windowHeightConfig = Config.Bind("4. UI", "WindowHeightBase", responsiveHeight, "控制台窗口的基础高度");
+            _windowWidthConfig = Config.Bind("3. UI", "WindowWidth", responsiveWidth, "窗口宽度");
+            _windowHeightConfig = Config.Bind("3. UI", "WindowHeightBase", responsiveHeight, "窗口高度");
+
+            // --- 人设配置 ---
+            _experimentalMemoryConfig = Config.Bind("4. Persona", "ExperimentalMemory", false, 
+                "启用记忆");
+            _personaConfig = Config.Bind("4. Persona", "SystemPrompt", DefaultPersona, "System Prompt");
+
+            // ===========================================
 
             // ================= 【修改点 2: 左上角对齐】 =================
             // 以前是 Screen.width / 2 (居中)，现在改为左上角 + 边距
@@ -351,7 +371,7 @@ namespace ChillAIMod
             GUILayout.Label(ttsStatus);
 
             // 设置展开按钮 (全宽)
-            string settingsBtnText = _showSettings ? "🔽 收起设置 (Hide Settings)" : "▶️ 展开设置 (Show Settings)";
+            string settingsBtnText = _showSettings ? "🔽 收起设置" : "▶️ 展开设置";
             if (GUILayout.Button(settingsBtnText, GUILayout.Height(elementHeight)))
             {
                 _showSettings = !_showSettings;
@@ -366,56 +386,81 @@ namespace ChillAIMod
                 // 留出 50px 给滚动条和边框，防止爆边
                 float innerBoxWidth = _windowRect.width - 50f; 
 
-                // --- 1. 基础配置 Box ---
+                // --- LLM 配置 Box ---
                 GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
-                GUILayout.Label("<b>--- 基础配置 ---</b>");
-                _useLocalOllama.Value = GUILayout.Toggle(_useLocalOllama.Value, "使用本地Ollama模型", GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
-                GUILayout.Label("API URL:");
-                _chatApiUrlConfig.Value = GUILayout.TextField(_chatApiUrlConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
-                if (!_useLocalOllama.Value) {
-                    GUILayout.Label("API Key:");
-                    _apiKeyConfig.Value = GUILayout.TextField(_apiKeyConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                string llmBtnText = _showLlmSettings ? "🔽 LLM 配置" : "▶️ LLM 配置";
+                if (GUILayout.Button(llmBtnText, GUILayout.Height(elementHeight)))
+                {
+                    _showLlmSettings = !_showLlmSettings;
                 }
-                GUILayout.Label("Model Name:");
-                _modelConfig.Value = GUILayout.TextField(_modelConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                
+                if (_showLlmSettings)
+                {
+                    GUILayout.Space(5);
+                    _useOllama.Value = GUILayout.Toggle(_useOllama.Value, "使用 Ollama API", GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                    
+                    // 【深度思考模式选项】
+                    GUILayout.Space(5);
+                    GUILayout.Label("指定深度思考（在请求体添加 think 键值对，目前仅 Ollama 支持）：");
+                    string[] thinkModeOptions = { "不指定", "启用", "禁用" };
+                    int currentMode = (int)_thinkModeConfig.Value;
+                    int newMode = GUILayout.SelectionGrid(currentMode, thinkModeOptions, 3, GUILayout.Height(elementHeight));
+                    if (newMode != currentMode)
+                    {
+                        _thinkModeConfig.Value = (ThinkMode)newMode;
+                    }
+                    
+                    GUILayout.Label("API URL：");
+                    _chatApiUrlConfig.Value = GUILayout.TextField(_chatApiUrlConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                    if (!_useOllama.Value) {
+                        GUILayout.Label("API Key：");
+                        _apiKeyConfig.Value = GUILayout.TextField(_apiKeyConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                    }
+                    GUILayout.Label("模型名称：");
+                    _modelConfig.Value = GUILayout.TextField(_modelConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                    
+                    GUILayout.Space(5);
+                    _logApiRequestBodyConfig.Value = GUILayout.Toggle(_logApiRequestBodyConfig.Value, "在日志中记录 API 请求体", GUILayout.Height(elementHeight));
+                    GUILayout.Space(5);
+                    _fixApiPathForThinkModeConfig.Value = GUILayout.Toggle(_fixApiPathForThinkModeConfig.Value, "指定深度思考模式时尝试改用 Ollama 原生 API 路径", GUILayout.Height(elementHeight));
+                    GUILayout.Space(5);
+                }
+                
                 GUILayout.EndVertical();
 
                 GUILayout.Space(5);
 
-                // --- 2. 语音配置 Box ---
+                // --- TTS 配置 Box ---
                 GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
-                GUILayout.Label("<b>--- 语音配置 ---</b>");
-                GUILayout.Label("TTS Service Url:");
-                _sovitsUrlConfig.Value = GUILayout.TextField(_sovitsUrlConfig.Value);
-                GUILayout.Label("音频路径 (.wav):");
-                // 路径通常很长，必须加 MinWidth(50f)
-                _refAudioPathConfig.Value = GUILayout.TextField(_refAudioPathConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
-                
-                GUILayout.Label("音频台词:");
-                _promptTextConfig.Value = GUILayout.TextArea(_promptTextConfig.Value, GUILayout.Height(elementHeight * 3), GUILayout.MinWidth(50f));
-                
-                GUILayout.Label("TTS 服务路径:");
-                _TTSServicePathConfig.Value = GUILayout.TextField(_TTSServicePathConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
-
-                GUILayout.Space(5);
-                _LaunchTTSServiceConfig.Value = GUILayout.Toggle(_LaunchTTSServiceConfig.Value, "启动时自动运行 TTS 服务", GUILayout.Height(elementHeight));
-                _quitTTSServiceOnQuitConfig.Value = GUILayout.Toggle(_quitTTSServiceOnQuitConfig.Value, "退出时自动关闭 TTS 服务", GUILayout.Height(elementHeight));
-                _audioPathCheckConfig.Value = GUILayout.Toggle(_audioPathCheckConfig.Value, "从 Mod 侧检测音频文件路径", GUILayout.Height(elementHeight));
-                
-                GUILayout.Space(5);
-                // --- 高级设置展开/折叠按钮 ---
-                string advancedBtnText = _showAdvancedSettings ? "🔽 收起高级设置" : "▶️ 展开高级设置";
-                if (GUILayout.Button(advancedBtnText, GUILayout.Height(elementHeight)))
+                string ttsBtnText = _showTtsSettings ? "🔽 TTS 配置" : "▶️ TTS 配置";
+                if (GUILayout.Button(ttsBtnText, GUILayout.Height(elementHeight)))
                 {
-                    _showAdvancedSettings = !_showAdvancedSettings;
+                    _showTtsSettings = !_showTtsSettings;
                 }
                 
-                // --- 高级设置内容 ---
-                if (_showAdvancedSettings)
+                if (_showTtsSettings)
                 {
                     GUILayout.Space(5);
-                    GUILayout.Label("<b>高级设置:</b>");
+                    GUILayout.Label("TTS 服务 URL：");
+                    _sovitsUrlConfig.Value = GUILayout.TextField(_sovitsUrlConfig.Value);
+
+                    GUILayout.Label("TTS 服务脚本文件路径：");
+                    _TTSServicePathConfig.Value = GUILayout.TextField(_TTSServicePathConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+
+                    GUILayout.Space(5);
+                    _LaunchTTSServiceConfig.Value = GUILayout.Toggle(_LaunchTTSServiceConfig.Value, "启动时自动运行 TTS 服务", GUILayout.Height(elementHeight));
+                    _quitTTSServiceOnQuitConfig.Value = GUILayout.Toggle(_quitTTSServiceOnQuitConfig.Value, "退出时自动关闭 TTS 服务", GUILayout.Height(elementHeight));
+                    GUILayout.Label("音频文件路径（*.wav）：");
+                    // 路径通常很长，必须加 MinWidth(50f)
+                    _refAudioPathConfig.Value = GUILayout.TextField(_refAudioPathConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                    GUILayout.Space(5);
+                    _audioPathCheckConfig.Value = GUILayout.Toggle(_audioPathCheckConfig.Value, "从 Mod 侧检测音频文件路径", GUILayout.Height(elementHeight));
+                    GUILayout.Space(5);
                     
+                    GUILayout.Label("音频文件台词：");
+                    _promptTextConfig.Value = GUILayout.TextArea(_promptTextConfig.Value, GUILayout.Height(elementHeight * 3), GUILayout.MinWidth(50f));
+                    
+                    GUILayout.Space(5);
                     GUILayout.Label("音频文件语言 (prompt_lang):");
                     _promptLangConfig.Value = GUILayout.TextField(_promptLangConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                     
@@ -423,112 +468,131 @@ namespace ChillAIMod
                     _targetLangConfig.Value = GUILayout.TextField(_targetLangConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                     
                     GUILayout.Space(5);
-                    _skipJapaneseCheckConfig.Value = GUILayout.Toggle(_skipJapaneseCheckConfig.Value, "跳过日语检测（强制调用 TTS）", GUILayout.Height(elementHeight));
+                    _japaneseCheckConfig.Value = GUILayout.Toggle(_japaneseCheckConfig.Value, "检测合成语音文本是否为日文（当合成语音语言为 ja 时可防止发出怪声）", GUILayout.Height(elementHeight));
                     
+                    GUILayout.Space(5);
+
+                    GUILayout.Label($"语音音量：{_voiceVolumeConfig.Value:F2}");
+                    
+                    // 第一行：滑动条
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(5);
+                    float newVolume = GUILayout.HorizontalSlider(_voiceVolumeConfig.Value, 0.0f, 1.0f);
+                    GUILayout.Space(5);
+                    GUILayout.EndHorizontal();
+
+                    if (newVolume != _voiceVolumeConfig.Value)
+                    {
+                        _voiceVolumeConfig.Value = newVolume;
+                        _audioSource.volume = newVolume;
+                        _tempVolumeString = newVolume.ToString("F2");
+                    }
+
+                    // 第二行：输入框+按钮
+                    GUILayout.Space(5);
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("手动输入：", GUILayout.Width(labelWidth), GUILayout.Height(elementHeight));
+
+                    _tempVolumeString = GUILayout.TextField(_tempVolumeString, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f)); 
+                    if (GUILayout.Button("应用", GUILayout.Width(btnWidth), GUILayout.Height(elementHeight)))
+                    {
+                        if (float.TryParse(_tempVolumeString, out float parsedVolume))
+                        {
+                            parsedVolume = Mathf.Clamp(parsedVolume, 0.0f, 1.0f);
+                            _voiceVolumeConfig.Value = parsedVolume;
+                            _audioSource.volume = parsedVolume;
+                            _tempVolumeString = parsedVolume.ToString("F2");
+                        }
+                    }
+                    GUILayout.EndHorizontal();
+
+                    GUILayout.Space(10);
+
+                }
+                
+                GUILayout.EndVertical();
+
+                GUILayout.Space(5);
+
+                // --- 界面配置 Box ---
+                GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
+                string interfaceBtnText = _showInterfaceSettings ? "🔽 界面配置" : "▶️ 界面配置";
+                if (GUILayout.Button(interfaceBtnText, GUILayout.Height(elementHeight)))
+                {
+                    _showInterfaceSettings = !_showInterfaceSettings;
+                }
+                if (_showInterfaceSettings)
+                {
+                    // 宽度设置
+                    GUILayout.Label($"当前宽度：{_windowWidthConfig.Value:F0}px");
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("新宽度：", GUILayout.Width(labelWidth), GUILayout.Height(elementHeight));
+                    
+                    // 【核心修改】允许缩小
+                    _tempWidthString = GUILayout.TextField(_tempWidthString, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                    
+                    if (GUILayout.Button("应用", GUILayout.Width(btnWidth), GUILayout.Height(elementHeight)))
+                    {
+                        if (float.TryParse(_tempWidthString, out float newWidth) && newWidth >= 300f)
+                        {
+                            _windowWidthConfig.Value = newWidth;
+                            // 这里删除了重置居中代码，只改大小
+                            _tempWidthString = newWidth.ToString("F0");
+                        }
+                    }
+                    GUILayout.EndHorizontal();
+
+                    // 高度设置
+                    GUILayout.Label($"当前基础高度: {_windowHeightConfig.Value:F0}px");
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("新高度:", GUILayout.Width(labelWidth), GUILayout.Height(elementHeight));
+                    
+                    // 【核心修改】允许缩小
+                    _tempHeightString = GUILayout.TextField(_tempHeightString, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
+                    
+                    if (GUILayout.Button("应用", GUILayout.Width(btnWidth), GUILayout.Height(elementHeight)))
+                    {
+                        if (float.TryParse(_tempHeightString, out float newHeight) && newHeight >= 100f)
+                        {
+                            _windowHeightConfig.Value = newHeight;
+                            _tempHeightString = newHeight.ToString("F0");
+                        }
+                    }
+                    GUILayout.EndHorizontal();
                     GUILayout.Space(5);
                 }
                 
-                GUILayout.EndVertical(); // <--- 必须结束！
-
-                GUILayout.Space(5);
-
-                // --- 3. 音量配置 Box ---
-                GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
-                GUILayout.Label($"语音音量: {_voiceVolumeConfig.Value:F2}");
-                
-                // 第一行：滑动条
-                GUILayout.BeginHorizontal();
-                GUILayout.Space(5);
-                float newVolume = GUILayout.HorizontalSlider(_voiceVolumeConfig.Value, 0.0f, 1.0f);
-                GUILayout.Space(5);
-                GUILayout.EndHorizontal();
-
-                if (newVolume != _voiceVolumeConfig.Value)
-                {
-                    _voiceVolumeConfig.Value = newVolume;
-                    _audioSource.volume = newVolume;
-                    _tempVolumeString = newVolume.ToString("F2");
-                }
-
-                // 第二行：输入框+按钮
-                GUILayout.Space(5);
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("手动输入:", GUILayout.Width(labelWidth), GUILayout.Height(elementHeight));
-
-                _tempVolumeString = GUILayout.TextField(_tempVolumeString, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f)); 
-                if (GUILayout.Button("应用", GUILayout.Width(btnWidth), GUILayout.Height(elementHeight)))
-                {
-                    if (float.TryParse(_tempVolumeString, out float parsedVolume))
-                    {
-                        parsedVolume = Mathf.Clamp(parsedVolume, 0.0f, 1.0f);
-                        _voiceVolumeConfig.Value = parsedVolume;
-                        _audioSource.volume = parsedVolume;
-                        _tempVolumeString = parsedVolume.ToString("F2");
-                    }
-                }
-                GUILayout.EndHorizontal();
-                GUILayout.EndVertical(); // <--- 必须结束！
-
-                GUILayout.Space(5);
-
-                // --- 4. 窗口大小 Box ---
-                GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
-                GUILayout.Label("<b>--- 界面配置 ---</b>");
-
-                // 宽度设置
-                GUILayout.Label($"当前宽度: {_windowWidthConfig.Value:F0}px");
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("新宽度:", GUILayout.Width(labelWidth), GUILayout.Height(elementHeight));
-                
-                // 【核心修改】允许缩小
-                _tempWidthString = GUILayout.TextField(_tempWidthString, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
-                
-                if (GUILayout.Button("应用", GUILayout.Width(btnWidth), GUILayout.Height(elementHeight)))
-                {
-                    if (float.TryParse(_tempWidthString, out float newWidth) && newWidth >= 300f)
-                    {
-                        _windowWidthConfig.Value = newWidth;
-                        // 这里删除了重置居中代码，只改大小
-                        _tempWidthString = newWidth.ToString("F0");
-                    }
-                }
-                GUILayout.EndHorizontal();
-
-                // 高度设置
-                GUILayout.Label($"当前基础高度: {_windowHeightConfig.Value:F0}px");
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("新高度:", GUILayout.Width(labelWidth), GUILayout.Height(elementHeight));
-                
-                // 【核心修改】允许缩小
-                _tempHeightString = GUILayout.TextField(_tempHeightString, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
-                
-                if (GUILayout.Button("应用", GUILayout.Width(btnWidth), GUILayout.Height(elementHeight)))
-                {
-                    if (float.TryParse(_tempHeightString, out float newHeight) && newHeight >= 100f)
-                    {
-                        _windowHeightConfig.Value = newHeight;
-                        _tempHeightString = newHeight.ToString("F0");
-                    }
-                }
-                GUILayout.EndHorizontal();
                 GUILayout.EndVertical(); 
                 GUILayout.Space(5);
 
-                // --- 5. 人设配置 Box ---
+                // --- 人设配置 Box ---
                 GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
-                GUILayout.Label("<b>--- 人设 (System Prompt) ---</b>");
-                GUILayout.BeginHorizontal();
-                _experimentalMemoryConfig.Value = GUILayout.Toggle(_experimentalMemoryConfig.Value, "启用记忆", GUILayout.Height(elementHeight));
-                if (GUILayout.Button("🗑️ 清除所有记忆", GUILayout.Width(btnWidth*3)))
+                string personaBtnText = _showPersonaSettings ? "🔽 人设配置" : "▶️ 人设配置";
+                if (GUILayout.Button(personaBtnText, GUILayout.Height(elementHeight)))
                 {
-                    _hierarchicalMemory?.ClearAllMemory();
-                    Logger.LogInfo("记忆已清空");
+                    _showPersonaSettings = !_showPersonaSettings;
                 }
-                GUILayout.EndHorizontal();
-                _personaScrollPosition = GUILayout.BeginScrollView(_personaScrollPosition, GUILayout.Height(elementHeight * 5));
-                _personaConfig.Value = GUILayout.TextArea(_personaConfig.Value, GUILayout.ExpandHeight(true));
-                GUILayout.EndScrollView();
-                GUILayout.EndVertical(); // <--- 必须结束！
+                
+                if (_showPersonaSettings)
+                {
+                    GUILayout.Space(5);
+                    GUILayout.BeginHorizontal();
+                    _experimentalMemoryConfig.Value = GUILayout.Toggle(_experimentalMemoryConfig.Value, "启用记忆", GUILayout.Height(elementHeight));
+                    if (GUILayout.Button("🗑️ 清除所有记忆", GUILayout.Width(btnWidth*3)))
+                    {
+                        _hierarchicalMemory?.ClearAllMemory();
+                        Logger.LogInfo("记忆已清空");
+                    }
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(5);
+                    GUILayout.Label("人设（系统提示词）：");
+                    _personaScrollPosition = GUILayout.BeginScrollView(_personaScrollPosition, GUILayout.Height(elementHeight * 6));
+                    _personaConfig.Value = GUILayout.TextArea(_personaConfig.Value, GUILayout.ExpandHeight(true));
+                    GUILayout.EndScrollView();
+                    GUILayout.Space(5);
+                }
+                
+                GUILayout.EndVertical();
 
                 GUILayout.Space(10);
                 
@@ -544,7 +608,7 @@ namespace ChillAIMod
 
             // === 对话区域 ===
             GUILayout.Space(10);
-            GUILayout.Label("<b>与聪音对话:</b>");
+            GUILayout.Label("<b>与聪音对话：</b>");
 
             GUI.backgroundColor = Color.white;
 
@@ -692,26 +756,38 @@ namespace ChillAIMod
             Logger.LogInfo($"[发送给LLM的完整内容]\n========================================\n[System Prompt]\n{persona}\n\n[User Content + Memory]\n{promptWithMemory}\n========================================");
             
             string jsonBody = "";
-            string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
+            string extraJson = _useOllama.Value ? $@",""stream"": false" : "";
+            
+            // 【深度思考参数】
+            extraJson += GetThinkParameterJson();
+            
             if (modelName.Contains("gemma")) {
                 // 将 persona 作为背景信息放在 user 消息的最前面
                 string finalPrompt = $"[System Instruction]\n{persona}\n\n[User Message]\n{promptWithMemory}";
                 jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""user"", ""content"": ""{ResponseParser.EscapeJson(finalPrompt)}"" }} ]{extraJson} }}";
             } else {
-                // Gemini 或 Local Ollama (如果是 Llama3 等) 通常支持 system role
+                // Gemini 或 Ollama (如果是 Llama3 等) 通常支持 system role
                 jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""system"", ""content"": ""{ResponseParser.EscapeJson(persona)}"" }}, {{ ""role"": ""user"", ""content"": ""{ResponseParser.EscapeJson(promptWithMemory)}"" }} ]{extraJson} }}";
             }
             // string jsonBody = $@"{{ ""model"": ""{modelName}"", ""messages"": [ {{ ""role"": ""system"", ""content"": ""{EscapeJson(persona)}"" }}, {{ ""role"": ""user"", ""content"": ""{EscapeJson(promptWithMemory)}"" }} ]{extraJson} }}";
+            
+            // 【日志】打印完整的请求体（如果启用）
+            if (_logApiRequestBodyConfig.Value)
+            {
+                Logger.LogInfo($"[API请求] 完整请求体:\n{jsonBody}");
+            }
+            
             string fullResponse = "";
 
             // 3. 发送 Chat 请求
-            using (UnityWebRequest request = new UnityWebRequest(_chatApiUrlConfig.Value, "POST"))
+            string apiUrl = GetApiUrlForThinkMode();
+            using (UnityWebRequest request = new UnityWebRequest(apiUrl, "POST"))
             {
                 byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
                 request.uploadHandler = new UploadHandlerRaw(bodyRaw);
                 request.downloadHandler = new DownloadHandlerBuffer();
                 request.SetRequestHeader("Content-Type", "application/json");
-                if (!_useLocalOllama.Value)
+                if (!_useOllama.Value)
                 {
                     request.SetRequestHeader("Authorization", "Bearer " + apiKey);
                 }
@@ -720,7 +796,7 @@ namespace ChillAIMod
                 if (request.result == UnityWebRequest.Result.Success)
                 {
                     Logger.LogInfo($"获取的完整回复：\n\t{request.downloadHandler.text}");
-                    if (_useLocalOllama.Value)
+                    if (_useOllama.Value)
                     {
                         fullResponse = ResponseParser.ExtractContentFromOllama(request.downloadHandler.text , Logger);
                         Logger.LogInfo($"ExtractContentFromOllama: \n\t{fullResponse}");
@@ -804,8 +880,8 @@ namespace ChillAIMod
                 // 只有当 voiceText 不为空，且看起来像是日语时，才请求 TTS
                 // 简单的日语检测：看是否包含假名 (Hiragana/Katakana)
                 // 这是一个可选的保险措施
-                bool isJapanese = _skipJapaneseCheckConfig.Value ? true : Regex.IsMatch(voiceText, @"[\u3040-\u309F\u30A0-\u30FF]");
-                Logger.LogInfo($"isJapanese: {isJapanese} (skipJapaneseCheck: {_skipJapaneseCheckConfig.Value})");
+                bool isJapanese = _japaneseCheckConfig.Value ? Regex.IsMatch(voiceText, @"[\u3040-\u309F\u30A0-\u30FF]") : true ;
+                Logger.LogInfo($"isJapanese: {isJapanese} (japaneseCheck: {_japaneseCheckConfig.Value})");
 
                 if (!string.IsNullOrEmpty(voiceText) && isJapanese)
                 {
@@ -1101,7 +1177,10 @@ namespace ChillAIMod
             
             string apiKey = _apiKeyConfig.Value;
             string modelName = _modelConfig.Value;
-            string extraJson = _useLocalOllama.Value ? $@",""stream"": false" : "";
+            string extraJson = _useOllama.Value ? $@",""stream"": false" : "";
+            
+            // 【深度思考参数】
+            extraJson += GetThinkParameterJson();
 
             // 构建请求（gemma 风格：system instruction + user message 合并为一个 user 角色）
             string finalPrompt = $"[System Instruction]\n你是一个专业的文本总结助手。\n\n[User Message]\n{prompt}";
@@ -1114,14 +1193,19 @@ namespace ChillAIMod
 
             Logger.LogInfo($"[HierarchicalMemory] 发送总结请求到: {_chatApiUrlConfig.Value}");
             Logger.LogInfo($"[HierarchicalMemory] Prompt 预览: {prompt.Substring(0, Math.Min(200, prompt.Length))}...");
+            if (_logApiRequestBodyConfig.Value)
+            {
+                Logger.LogInfo($"[HierarchicalMemory] 完整请求体:\n{jsonBody}");
+            }
 
-            using (UnityWebRequest request = new UnityWebRequest(_chatApiUrlConfig.Value, "POST"))
+            string apiUrl = GetApiUrlForThinkMode();
+            using (UnityWebRequest request = new UnityWebRequest(apiUrl, "POST"))
             {
                 byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
                 request.uploadHandler = new UploadHandlerRaw(bodyRaw);
                 request.downloadHandler = new DownloadHandlerBuffer();
                 request.SetRequestHeader("Content-Type", "application/json");
-                if (!_useLocalOllama.Value)
+                if (!_useOllama.Value)
                 {
                     request.SetRequestHeader("Authorization", "Bearer " + apiKey);
                 }
@@ -1133,7 +1217,7 @@ namespace ChillAIMod
                 {
                     Logger.LogInfo($"[HierarchicalMemory] API 响应成功: {request.downloadHandler.text.Substring(0, Math.Min(200, request.downloadHandler.text.Length))}...");
                     
-                    string response = _useLocalOllama.Value
+                    string response = _useOllama.Value
                         ? ResponseParser.ExtractContentFromOllama(request.downloadHandler.text , Logger)
                         : ResponseParser.ExtractContentRegex(request.downloadHandler.text);
 
@@ -1149,6 +1233,45 @@ namespace ChillAIMod
             }
             
             Logger.LogInfo("[HierarchicalMemory] <<< 总结调用完成");
+        }
+
+        /// <summary>
+        /// 获取适合当前think模式的API URL
+        /// </summary>
+        private string GetApiUrlForThinkMode()
+        {
+            string baseUrl = _chatApiUrlConfig.Value;
+            
+            // 如果启用了API路径修正，且think模式不是Default，需要使用Ollama原生API (/api/chat)
+            if (_fixApiPathForThinkModeConfig.Value && _thinkModeConfig.Value != ThinkMode.Default)
+            {
+                // 将 /v1/chat/completions 替换为 /api/chat
+                if (baseUrl.Contains("/v1/chat/completions"))
+                {
+                    baseUrl = baseUrl.Replace("/v1/chat/completions", "/api/chat");
+                    Logger.LogInfo($"[Think Mode] 切换到 Ollama 原生 API: {baseUrl}");
+                }
+                // 如果URL已经是 /api/chat 或其他格式，保持不变
+            }
+            
+            return baseUrl;
+        }
+
+        /// <summary>
+        /// 获取深度思考参数的 JSON 字符串
+        /// </summary>
+        private string GetThinkParameterJson()
+        {
+            if (_thinkModeConfig.Value == ThinkMode.Enable)
+            {
+                return @",""think"": true";
+            }
+            else if (_thinkModeConfig.Value == ThinkMode.Disable)
+            {
+                return @",""think"": false";
+            }
+            // Default 模式不添加 think 参数
+            return "";
         }
 
         /// <summary>
