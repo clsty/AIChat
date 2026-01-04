@@ -386,7 +386,7 @@ namespace ChillAIMod
 
                 // --- 1. 基础配置 Box ---
                 GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
-                GUILayout.Label("<b>--- 基础配置 ---</b>");
+                GUILayout.Label("<b>--- LLM 配置 ---</b>");
                 _useOllama.Value = GUILayout.Toggle(_useOllama.Value, "使用 Ollama API", GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                 
                 // 【深度思考模式选项】
@@ -420,14 +420,14 @@ namespace ChillAIMod
 
                 // --- 2. 语音配置 Box ---
                 GUILayout.BeginVertical("box", GUILayout.Width(innerBoxWidth));
-                GUILayout.Label("<b>--- 语音配置 ---</b>");
+                GUILayout.Label("<b>--- TTS 配置 ---</b>");
                 GUILayout.Label("TTS 服务 URL：");
                 _sovitsUrlConfig.Value = GUILayout.TextField(_sovitsUrlConfig.Value);
-                GUILayout.Label("音频路径（*.wav）：");
+                GUILayout.Label("音频文件路径（*.wav）：");
                 // 路径通常很长，必须加 MinWidth(50f)
                 _refAudioPathConfig.Value = GUILayout.TextField(_refAudioPathConfig.Value, GUILayout.Height(elementHeight), GUILayout.MinWidth(50f));
                 
-                GUILayout.Label("音频台词：");
+                GUILayout.Label("音频文件台词：");
                 _promptTextConfig.Value = GUILayout.TextArea(_promptTextConfig.Value, GUILayout.Height(elementHeight * 3), GUILayout.MinWidth(50f));
                 
                 GUILayout.Label("TTS 服务脚本文件路径：");
