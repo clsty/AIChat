@@ -17,6 +17,7 @@ echo "Downloading BepInEx v${BEPINEX_VERSION}..."
 download_and_extract() {
     local url="$1"
     local tmp_dir=/tmp/bepinex-deps
+    mkdir -p ${tmp_dir}
     
     cd "${tmp_dir}" || return 1
     echo "Downloading from ${url}..." >&2
