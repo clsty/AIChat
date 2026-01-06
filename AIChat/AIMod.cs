@@ -1063,7 +1063,7 @@ namespace ChillAIMod
             yield return new WaitForSecondsRealtime(clipDuration + 0.5f);
 
             // 恢复
-            if (_audioSource != null &&_audioSource.isPlaying) {
+            if (_audioSource != null && _audioSource.isPlaying) {
                 // 即使等待时间到了，语音还在播放，就强制停止进行兜底
                 Logger.LogWarning("等待结束，强制停止语音播放");
                 _audioSource.Stop();

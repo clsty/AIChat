@@ -17,6 +17,9 @@
 *.svnj
 *.scc
 
+# --- Visual Studio Code ---
+.vscode
+
 # --- Makefile
 *.temp
 
