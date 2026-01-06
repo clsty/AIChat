@@ -66,7 +66,11 @@ jobs:
         env:
           TZ: UTC
 
-      - name: Update Pre-Release
+      - name: Delete old preview release
+        run: gh release delete preview --yes || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Latest Preview Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: preview
