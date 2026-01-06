@@ -17,10 +17,10 @@ jobs:
       - name: Checkout AIChat
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mono-complete zip
+      - name: Cache APT packages
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: mono-complete zip pandoc
 
       - name: Download Unity assemblies from NuGet
         run: |
@@ -35,8 +35,11 @@ jobs:
         run: |
           make GAME_ROOT="${{ github.workspace }}/build-resource/buildenv/mokgamedir"
           cp AIChat/bin/Release/AIChat.dll build-resource/assets/
-          # 小白未必知道怎么打开 md 文件
-          cp README.md build-resource/assets/README.md.txt
+
+      - name: Add README.html
+          # github.css 来自 https://github.com/otsaloma/markdown-css
+        run: |
+          pandoc -f gfm --css=build-resource/buildenv/github.css --standalone --to=html5 --output=build-resource/assets/README.html --highlight-style=haddock --embed-resources README.md
 
       - name: Zip Artifact
         run: |
