@@ -63,7 +63,8 @@
        （注：对于 Nvidia 50 系显卡，请将上面的 `126` 改为 `128`）
 
 2. 放置必要文件
-   - 将前面下载过的 Mod 压缩包中的 `api_v2_ex.py` 和 `Voice_MainScenario_27_016.wav` 放到 `GPT-SoVITS` 的根目录下（对于 Windows 用户是整合包解压后的根目录，对于 Linux 用户是 Git 仓库的根目录）。
+   - 将前面下载过的 Mod 压缩包中的 `api_v2_ex.py` 和 `Voice_MainScenario_27_016.wav` 放到 `GPT-SoVITS` 的根目录下。
+     - **一定要看清是哪个目录**，这个根目录下是有 `README.md`、`LICENSE`、`api_v2.py` 等文件的，不要错把文件放到这个根目录下的 `GPT_SoVITS`、`GPT-SoVITS` 里面了。
 
 3. 测试 TTS 服务
    - 注：以下假设 WebAPI v2 的 TTS 服务运行于 `http://127.0.0.1:9880`。这是默认情况，若你做过改动，则在以下步骤中也要相应变更。
