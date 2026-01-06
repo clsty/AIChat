@@ -35,7 +35,7 @@
    - 注意：聊天内容会发送到你配置的 API，请留心 API Key 与隐私策略。
 
 ### 语音配置（可选）
-本项目依赖 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) 的 WebAPI v2 来生成语音，
+本项目依赖 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS)（简称 GSV）的 WebAPI v2 来生成语音，
 而它的文档着重于 WebUI 和在线云服务，
 就我们的目的（本地部署 WebAPI v2）而言较为混乱，所以这里提供较为详细的说明。
 
@@ -79,7 +79,7 @@
      > ffplay -nodisp -autoexit 'http://127.0.0.1:9880/tts?text=こんにちは、お元気ですか？今日も一緒に頑張りましょう！&text_lang=ja&ref_audio_path=Voice_MainScenario_27_016.wav&prompt_text=君が集中した時のシータ波を検出して、リンクをつなぎ直せば元通りになるはず。&prompt_lang=ja&speed_factor=1.0&streaming_mode=True'
      > ```
 
-     - 测试过程中，GSV 会自动下载 `https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin` 到 GSV 根目录下的 `GPT_SoVITS/pretrained_models/fast_langdetect/lid.176.bin`。
+     - 测试过程中，GPT-SoVITS 会自动下载 `https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin` 到 GPT-SoVITS 根目录下的 `GPT_SoVITS/pretrained_models/fast_langdetect/lid.176.bin`。
        - Docker 用户可将目录 `fast_langdetect` 映射出去以实现数据持久化。
      - 稍等片刻，浏览器将会下载一个大约 300 KiB 大小的 `tts.wav` 文件，播放它应当能清晰地听到三句与游戏角色相似的日语语音，时长约 5 秒。
 
