@@ -4,7 +4,6 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ASSETS_DIR="${SCRIPT_DIR}/../assets"
-BUILD_ENV_DIR="${SCRIPT_DIR}"
 
 echo "Building README.html..."
 
@@ -12,7 +11,7 @@ echo "Building README.html..."
 pandoc \
   --metadata title="Chill AI Mod 说明" \
   --standalone --embed-resources \
-  --css=${BUILD_ENV_DIR}/github.css \
+  --css=${SCRIPT_DIR}/github.css \
   -f gfm --to=html5 \
   --highlight-style=haddock \
   --output=${ASSETS_DIR}/请读我.html \

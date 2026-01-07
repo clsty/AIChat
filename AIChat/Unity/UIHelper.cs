@@ -26,6 +26,7 @@ namespace AIChat.Unity
             foreach (var c in target.GetComponentsInParent<CanvasGroup>()) c.alpha = 1f;
             target.transform.parent.parent.localScale = Vector3.one;
         }
+
         public static void RestoreUiStatus(Dictionary<GameObject, bool> uiStatusMap, GameObject myTextObj, GameObject originalTextObj)
         {
             if (uiStatusMap != null)

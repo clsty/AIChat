@@ -184,7 +184,12 @@
 
 ## 构建
 本 Mod 的核心 `AIChat.dll` 可从仓库构建。首先要克隆仓库到本地，然后：
-- 在 Windows 下可使用 Visual Studio 构建（方法暂略）；
+- 在 Windows 下构建。
+  - 安装依赖：
+    - python (python --version验证)
+    - .NET SDK (dotnet --version验证)
+  - 在终端中 执行`python install-deps.py`
+  - 在终端中 执行`dotnet build` (构建release版本: `dotnet build -c Release`)
 - 在 Linux 下可使用 `make` 构建。
   - 安装依赖：
     - `make`
