@@ -96,7 +96,7 @@ jobs:
         with:
           tag_name: ${{ steps.info.outputs.version }}
           name: "稳定版 ${{ steps.info.outputs.version }}"
-          body_path: RELEASE.md
+          body_path: release-note.md
           files: AIChatMod.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
