@@ -3,7 +3,12 @@ name: Build Stable Release
 on:
   push:
     tags:
-      - 'v*'  # Trigger on version tags like v1.0.0, v1.2.3, etc.
+      - 'V[0-9]+.[0-9]+.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?'
+      # V1.0.0 - 基础版本
+      # V1.0.0-alpha - 预发布版本
+      # V1.0.0-beta.1 - 带数字的预发布版本
+      # V1.0.0+20230101 - 带日期的元数据
+      # V1.0.0-rc.1+build.123 - 完整格式
 
 permissions:
   contents: write
@@ -44,11 +49,7 @@ jobs:
 
       - name: Get tag name as version
         id: info
-        run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          echo "version=${TAG_NAME}" >> $GITHUB_OUTPUT
-          echo "hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "time=$(TZ=Asia/Shanghai git log -1 --date=format-local:'%Y-%m-%d %H:%M:%S UTC+8' --format='%cd')" >> $GITHUB_OUTPUT
+        run: echo "version=${GITHUB_REF#refs/tags/} >> $GITHUB_OUTPUT
 
       - name: Inject version into Version.cs
         run: |
@@ -57,7 +58,6 @@ jobs:
 
       - name: Build AIChat.dll
         run: |
-          cd ${{ github.workspace }}
           dotnet build -c Release
           cp AIChat/bin/Release/net472/AIChat.dll build-resource/assets/
 
@@ -69,20 +69,18 @@ jobs:
           cd build-resource/assets/
           zip -r ../../AIChatMod.zip .
 
+      - name: Delete old stable release with tag
+        continue-on-error: true
+        run: gh release delete ${{ steps.info.outputs.version }} --cleanup-tag --yes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Stable Release
         uses: softprops/action-gh-release@v2
         with:
           name: "稳定版 ${{ steps.info.outputs.version }}"
           body: |
-            [![Build Status](https://github.com/qzrs777/AIChat/actions/workflows/build-stable.yml/badge.svg)](https://github.com/qzrs777/AIChat/actions/workflows/build-stable.yml)
-            
-            这是一个稳定版本发布。
+            这是一个稳定版本。
 
-            **版本号：** ${{ steps.info.outputs.version }}
-
-            此构建的 Commit 信息：
-            - HASH： ${{ steps.info.outputs.hash }}
-            - 时间：${{ steps.info.outputs.time }}
           files: AIChatMod.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
