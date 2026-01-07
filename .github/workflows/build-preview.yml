@@ -49,7 +49,7 @@ jobs:
           echo "hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           echo "time_local=$(TZ=Asia/Shanghai git log -1 --date=format-local:'%Y-%m-%d %H:%M:%S UTC+8' --format='%cd')" >> $GITHUB_OUTPUT
           echo "time=$(TZ=UTC git log -1 --date=format-local:'%Y-%m-%d %H:%M:%S UTC' --format='%cd')" >> $GITHUB_OUTPUT
-          echo "0.1.2.3.4" >> $GITHUB_OUTPUT
+          echo "version=0.1.2.3.4" >> $GITHUB_OUTPUT
           #echo "version=$(TZ=UTC git log -1 --date=format-local:'0.%Y%m%d.%H%M%S' --format='%cd').$(git rev-parse --short=4 HEAD | perl -pe 's/([0-9a-f])/sprintf("%02d", hex($1))/ge')" >> $GITHUB_OUTPUT
 
       - name: Inject version into Version.cs
