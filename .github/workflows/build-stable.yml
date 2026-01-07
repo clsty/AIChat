@@ -23,6 +23,7 @@ jobs:
             echo "match=true" >> $GITHUB_OUTPUT
           else
             echo "match=false" >> $GITHUB_OUTPUT
+            echo "版本号在构建时将写入插件中，因 BepInEx 限制，版本号不能含字母，否则将无法加载。"
           fi
 
   build:
