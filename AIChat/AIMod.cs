@@ -20,7 +20,7 @@ namespace ChillAIMod
 {
     public enum ThinkMode { Default, Enable, Disable }
 
-    [BepInPlugin("com.username.chillaimod", "Chill AI Mod", "1.1.0")]
+    [BepInPlugin("com.username.chillaimod", "Chill AI Mod", AIChat.Version.VersionString)]
     public class AIMod : BaseUnityPlugin
     {
         // ================= 【配置项】 =================
@@ -234,7 +234,7 @@ namespace ChillAIMod
                 Logger.LogInfo(">>> 实验性分层记忆系统已启用 <<<");
             }
 
-            Logger.LogInfo(">>> AIMod V1.1.0  已加载 <<<");
+            Logger.LogInfo($">>> AIMod V{AIChat.Version.VersionString}  已加载 <<<");
         }
 
         void Update()
@@ -368,6 +368,9 @@ namespace ChillAIMod
             
             // 开始整体垂直布局
             GUILayout.BeginVertical();
+
+            // 版本信息显示（第一行）
+            GUILayout.Label($"版本号：{AIChat.Version.VersionString}");
 
             // 状态显示
             string status = GameBridge._heroineService != null ? "🟢 核心已连接" : "🔴 正在寻找核心...";
