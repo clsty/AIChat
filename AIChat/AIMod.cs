@@ -369,8 +369,8 @@ namespace ChillAIMod
             // 开始整体垂直布局
             GUILayout.BeginVertical();
 
-            // 版本信息显示（第一行）
-            GUILayout.Label($"版本号：{AIChat.Version.VersionString}");
+            // 版本信息显示
+            GUILayout.Label($"版本：V{AIChat.Version.VersionString}");
 
             // 状态显示
             string status = GameBridge._heroineService != null ? "🟢 核心已连接" : "🔴 正在寻找核心...";
