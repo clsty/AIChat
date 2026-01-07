@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    paths: [ .github/workflows/build.yml,AIChat/**,build-resource/** ]
+    paths: [ .github/workflows/build-preview.yml,AIChat/**,build-resource/** ]
 
 permissions:
   contents: write
@@ -48,7 +48,7 @@ jobs:
         run: |
           echo "hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           echo "time_local=$(TZ=Asia/Shanghai git log -1 --date=format-local:'%Y-%m-%d %H:%M:%S UTC+8' --format='%cd')" >> $GITHUB_OUTPUT
-          echo "time=$(TZ=UTC git log -1 --date=format-local:'%Y-%m-%d %H:%M:%S UTC+8' --format='%cd')" >> $GITHUB_OUTPUT
+          echo "time=$(TZ=UTC git log -1 --date=format-local:'%Y-%m-%d %H:%M:%S UTC' --format='%cd')" >> $GITHUB_OUTPUT
           echo "version=$(TZ=UTC date +%Y%m%d)-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Inject version into Version.cs
