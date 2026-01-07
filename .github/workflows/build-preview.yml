@@ -87,6 +87,8 @@ jobs:
             - HASH： ${{ steps.info.outputs.hash }}
             - 本地时间：${{ steps.info.outputs.time_local }}
             - 国际时间：${{ steps.info.outputs.time }}
+
+            临时版本号：${{ steps.info.outputs.version }}
           prerelease: true
           files: AIChatMod.zip
         env:
