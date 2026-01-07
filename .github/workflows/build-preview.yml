@@ -49,7 +49,7 @@ jobs:
           echo "hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           echo "time_local=$(TZ=Asia/Shanghai git log -1 --date=format-local:'%Y-%m-%d %H:%M:%S UTC+8' --format='%cd')" >> $GITHUB_OUTPUT
           echo "time=$(TZ=UTC git log -1 --date=format-local:'%Y-%m-%d %H:%M:%S UTC' --format='%cd')" >> $GITHUB_OUTPUT
-          echo "version=$(TZ=UTC date +%Y%m%d)-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "version=$(TZ=UTC date +%Y%m%d).$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Inject version into Version.cs
         run: |
@@ -80,7 +80,7 @@ jobs:
           tag_name: preview
           name: "预览版"
           body: |
-            [![Build Status](https://github.com/qzrs777/AIChat/actions/workflows/build.yml/badge.svg)](https://github.com/qzrs777/AIChat/actions/workflows/build.yml)
+            [![Build Status](https://github.com/qzrs777/AIChat/actions/workflows/build-preview.yml/badge.svg)](https://github.com/qzrs777/AIChat/actions/workflows/build-preview.yml)
             此为固定标签的预览版本，当有更新推送到特定路径时触发构建，也可由维护者手动触发构建。
 
             此构建的 Commit 信息：
