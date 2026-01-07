@@ -49,7 +49,7 @@ jobs:
           echo "hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           echo "time_local=$(TZ=Asia/Shanghai git log -1 --date=format-local:'%Y-%m-%d %H:%M:%S UTC+8' --format='%cd')" >> $GITHUB_OUTPUT
           echo "time=$(TZ=UTC git log -1 --date=format-local:'%Y-%m-%d %H:%M:%S UTC' --format='%cd')" >> $GITHUB_OUTPUT
-          echo "version=$(TZ=UTC git log -1 --date=format-local:'0.%Y%m%d.%H%M%S' --format='%cd').$(git rev-parse --short=7 HEAD | perl -pe 's/([0-9a-f])/sprintf("%02d", hex($1))/ge')" >> $GITHUB_OUTPUT
+          echo "version=$(TZ=UTC git log -1 --date=format-local:'0.%Y%m%d.%H%M%S' --format='%cd').$(git rev-parse --short=4 HEAD | perl -pe 's/([0-9a-f])/sprintf("%02d", hex($1))/ge')" >> $GITHUB_OUTPUT
 
       - name: Inject version into Version.cs
         run: |
@@ -90,7 +90,7 @@ jobs:
 
             临时版本号：${{ steps.info.outputs.version }}
 
-            > 临时版本号的格式为 `0.<UTC 日期>.<UTC 时分秒>.<提交哈希值前七位依次映射到十进制>`（BepInEx 限定版本号格式，不能出现字母）
+            > 临时版本号的格式为 `0.<UTC 年月日>.<UTC 时分秒>.<提交哈希前 7 位依次转 14 位数字>`（BepInEx 限定版本号格式，不能出现字母）
           prerelease: true
           files: AIChatMod.zip
         env:
