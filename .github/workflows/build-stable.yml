@@ -1,10 +1,9 @@
-name: Build and Package AIChat Mod
+name: Build Stable Release
 
 on:
-  workflow_dispatch:
   push:
-    branches: [ main ]
-    paths: [ .github/workflows/build.yml,AIChat/**,build-resource/** ]
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0, v1.2.3, etc.
 
 permissions:
   contents: write
@@ -43,14 +42,13 @@ jobs:
         if: steps.cache-unity.outputs.cache-hit != 'true' || steps.cache-bepinex.outputs.cache-hit != 'true'
         run: python3 build-resource/fetch.py
 
-      - name: Get commit info for version
+      - name: Get tag name as version
         id: info
         run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "version=${TAG_NAME}" >> $GITHUB_OUTPUT
           echo "hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "shorthash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
           echo "time=$(TZ=Asia/Shanghai git log -1 --date=format-local:'%Y-%m-%d %H:%M:%S UTC+8' --format='%cd')" >> $GITHUB_OUTPUT
-          echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
-          echo "version=$(date +%Y%m%d)-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Inject version into Version.cs
         run: |
@@ -71,26 +69,20 @@ jobs:
           cd build-resource/assets/
           zip -r ../../AIChatMod.zip .
 
-      - name: Delete old preview release with tag
-        continue-on-error: true
-        run: gh release delete preview --cleanup-tag --yes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create Latest Preview Release
+      - name: Create Stable Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: preview
-          name: "预览版"
+          name: "稳定版 ${{ steps.info.outputs.version }}"
           body: |
-            [![Build Status](https://github.com/qzrs777/AIChat/actions/workflows/build.yml/badge.svg)](https://github.com/qzrs777/AIChat/actions/workflows/build.yml)
-            此为无固定版本号的预览版本，当有更新推送到特定路径时触发构建，也可由维护者手动触发构建。
+            [![Build Status](https://github.com/qzrs777/AIChat/actions/workflows/build-stable.yml/badge.svg)](https://github.com/qzrs777/AIChat/actions/workflows/build-stable.yml)
+            
+            这是一个稳定版本发布。
 
             **版本号：** ${{ steps.info.outputs.version }}
 
             此构建的 Commit 信息：
             - HASH： ${{ steps.info.outputs.hash }}
             - 时间：${{ steps.info.outputs.time }}
-          prerelease: true
           files: AIChatMod.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
