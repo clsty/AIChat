@@ -49,7 +49,7 @@ jobs:
 
       - name: Inject version into Version.cs
         run: |
-          sed -i 's/public const string VersionString = "dev";/public const string VersionString = "${{ steps.info.outputs.version }}";/' AIChat/Version.cs
+          sed -i 's/public const string VersionString = "0.0.0";/public const string VersionString = "${{ steps.info.outputs.version }}";/' AIChat/Version.cs
           cat AIChat/Version.cs
 
       - name: Build AIChat.dll
