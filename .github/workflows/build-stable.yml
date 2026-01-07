@@ -18,7 +18,7 @@ jobs:
         run: |
           MSG="${{ github.event.head_commit.message }}"
           # 以 [Release] 开头，后面跟着数字.数字.数字
-          if [[ "$MSG" =~ \[Release\][0-9]+\.[0-9]+\.[0-9]+$ ; then
+          if [[ "$MSG" =~ \[Release\][0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "match=true" >> $GITHUB_OUTPUT
           else
             echo "match=false" >> $GITHUB_OUTPUT
