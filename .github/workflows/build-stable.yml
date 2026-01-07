@@ -2,16 +2,33 @@ name: Build Stable Release
 
 on:
   push:
-    tags:
-      - 'V[0-9]+.[0-9]+.[0-9]+'   # V1.0.0
-      - 'V[0-9]+.[0-9]+.[0-9]+-*' # V1.0.0-alpha, V1.0.0-rc.1
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  check-message:
     runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.regex.outputs.match }}
+    steps:
+      - id: regex
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+          # 以 [Release] 开头，后面跟着数字.数字.数字
+          if [[ "$MSG" =~ \[Release\][0-9]+\.[0-9]+\.[0-9]+$ ; then
+            echo "match=true" >> $GITHUB_OUTPUT
+          else
+            echo "match=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: check-message
+    if: needs.check-message.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[Release]')
 
     steps:
       - name: Checkout AIChat
@@ -43,14 +60,17 @@ jobs:
         if: steps.cache-unity.outputs.cache-hit != 'true' || steps.cache-bepinex.outputs.cache-hit != 'true'
         run: python3 build-resource/fetch.py
 
-      - name: Get tag name as version
+      - name: Get version info
         id: info
-        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          FULL_MSG="${{ github.event.head_commit.message }}"
+          VERSION=$(echo "$FULL_MSG" | sed -n 's/.*\[Release\]\(.*\)/\1/p' | head -n 1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Inject version into Version.cs
         run: |
           version="${{ steps.info.outputs.version }}"
-          sed -i 's/public const string VersionString = "0.0.0";/public const string VersionString = "${version_digital#V}";/' AIChat/Version.cs
+          sed -i 's/public const string VersionString = "0.0.0";/public const string VersionString = "${version}";/' AIChat/Version.cs
           cat AIChat/Version.cs
 
       - name: Build AIChat.dll
@@ -75,9 +95,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: "稳定版 ${{ steps.info.outputs.version }}"
-          body: |
-            这是一个稳定版本。
-
+          body_path: RELEASE.md
           files: AIChatMod.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
