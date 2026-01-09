@@ -201,7 +201,9 @@
   ```sh
   dotnet build
   ```
-  - 默认构建 Debug 版本。若要构建 Release 版本，运行 `dotnet build -c Release`。
+  - 默认构建 Debug 版本。
+  - 若要构建 Console 版本（生成 exe 文件，用于调试），运行 `dotnet build -c Console`。
+  - 若要构建 Release 版本，运行 `dotnet build -c Release`。
 - 构建产物位于 `AIChat/bin/<构建种类>/<.NET 版本>/AIChat.dll`
   > 提示：运行此命令可查看所有被 `.gitignore` 忽略的文件（在构建时所生成的文件一般都需要被忽略）：
   > ```bash
@@ -237,7 +239,7 @@
 - Linux 下不支持中文输入法
   - 在 Linux 下，游戏本身同样不支持中文输入法，所以这不是本 Mod 的问题。但你可以利用 [linux-ime-helper](https://github.com/clsty/linux-ime-helper) 来输入中文；另外语音输入也可以识别中文。
 
-## 致谢与许可
+## 声明
 
 本项目使用了以下开源项目：
 - [BepInEx](https://github.com/BepInEx/BepInEx)：Unity/XNA 游戏 Mod 框架。
@@ -252,3 +254,5 @@
   - 仓库内含开源的 `UnityEngine.UI.dll`（许可：Unity Companion License），除此以外的其他文件由于闭源而未包含。
 
 本项目是 MIT 许可的自由开源软件。详见 [LICENSE](https://github.com/qzrs777/AIChat/blob/main/LICENSE)。
+
+本项目与游戏官方无关；此游戏也有其他 Mod，可参见：[awesome-chillwithyou](https://github.com/clsty/awesome-chillwithyou)。
