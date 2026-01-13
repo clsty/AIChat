@@ -238,6 +238,8 @@
   - 注：插件默认会检测语音文本是否含日文假名，若无假名则不会调用 TTS，而仅显示字幕文本。
 - Linux 下不支持中文输入法
   - 在 Linux 下，游戏本身同样不支持中文输入法，所以这不是本 Mod 的问题。但你可以利用 [linux-ime-helper](https://github.com/clsty/linux-ime-helper) 来输入中文；另外语音输入也可以识别中文。
+- Linux 下部分元素尺寸过小
+  - 参见 [#48](https://github.com/qzrs777/AIChat/issues/48)。
 
 ## 声明
 
